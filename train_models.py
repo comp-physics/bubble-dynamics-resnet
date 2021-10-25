@@ -1,15 +1,11 @@
-#!/usr/bin/env python
-# coding: utf-8
-
-# ## Train ResNets
-
 # ### created by Yuying Liu, 04/30/2020
+# ## updated by Scott Sims, 10/25/2021
 
-# This script is a template for training neural network time-steppers for different systems and different time scales. To reproduce the results in the paper, one needs to obtain all 11 neural network models for each nonlinear system under study. For setup details, please refer to Table 2 in the paper.
 import os
 import sys
 import torch
 import numpy as np
+import yaml
 
 module_path = os.path.abspath(os.path.join(os.getcwd(),'src'))
 if module_path not in sys.path:
@@ -20,34 +16,47 @@ import ResNet as net
 #=========================================================
 # Command Line Arguments
 #=========================================================
-num_arg = len(sys.argv)
-if num_arg != 7:
-    msg = "Expected 7 arguments but counted {}.".format(num_arg)
-    msg = msg + "\n| system | dt | k_max | num_inputs | num_layers | layer_size | batch_size |"
-    sys.exit(msg)
-
-system = sys.argv[0]
-dt = sys.argv[1]
-k_max = sys.argv[2]
-num_inputs = sys.argv[3]
-num_layers = sys.argv[4]
-layer_size = sys.argv[5]
-batch_size = sys.argv[6]
-
+# print("| system = {0:s} | dt={1:} | k_max={2:} | num_inputs={3:} | num_layers={4:} | layer_size={5:} |".format(system,dt,k_max,num_inputs,num_layers,layer_size) )
+file_parameters = open("parameters.yaml", 'r')
+dictionary = yaml.load(file_parameters, loader=yaml.FullLoader)
+file_parameters.close()
+#---------------------------------------
+system = dictionary[system]
+dt = dictionary[dt]
+k_max = dictionary[k_max]
+steps_min = dictionary[steps_min]
+steps_max = dictionary[steps_max]
+P_min = dictionary[P_min]
+P_max = dictionary[P_max]
+R_min = dictionary[R_min]
+R_max = dictionary[R_max]
+R_test = dictionary[R_test]
+Rdot_min = dictionary[Rdot_min]
+Rdot_max = dictionary[Rdot_max]
+Rdot_test = dictionary[Rdot_test]
+n_train = dictionary[n_train]
+n_val = dictionary[n_val]
+n_test = dictionary[n_test]
+num_layers = dictionary[num_layers]
+layer_size = dictionary[layer_size]
+num_inputs = dictionary[num_inputs]
+#---------------------------------------
 print("ResNet Architecture: {0:}-in | {1:}x{2:} | {3:}-out".format(num_inputs, num_layers, layer_size, num_inputs))
 arch = [num_inputs]
 for j in range(num_layers):
     arch.append(layer_size)
 arch.append(num_inputs)
-
+#---------------------------------------
 lr = 1e-3                     # learning rate
 max_epoch = 100000            # the maximum training epoch
-
 #=========================================================
 # Directories and Paths
 #=========================================================
-data_dir = os.path.join(os.getcwd(), '/data/', system)
-model_dir = os.path.join(os.getcwd(), '/models/', system)
+n_steps = np.int64(steps_min * 2**k_max)
+data_folder = 'data_dt={}_tmax={}_P={}-{}_R={}-{}_(train|val|test)=({}|{}|{}).pt'.format(dt, n_steps, P_min, P_max, R_min, R_max, n_train, n_val, n_test)
+data_dir = os.path.join(os.getcwd(), '/data/', data_folder)
+model_folder = 'models_dt={}_P={}-{}_R={}-{}_inputs={}_resnet={}x{}.pt'.format(dt, P_min, P_max, R_min, R_max, num_inputs, num_layers, layer_size)
+model_dir = os.path.join(os.getcwd(), '/models/', model_folder)
 if not os.path.exists(data_dir):
     sys.exit("Cannot find folder ../data/{} in current directory".format(system))
 if not os.path.exists(model_dir):
@@ -70,11 +79,12 @@ n_steps = test_data.shape[1] - 1
 for k in range(k_max+1):
 
     step_size = 2**k
-    num_steps = np.int64(n_steps / step_size)
+    model_steps = np.int64(n_steps / step_size)
+    model_steps = np.min( [model_steps, steps_max] )
 
 # create dataset object
-    dataset = net.DataSet(train_data, val_data, test_data, dt, step_size, num_steps)
-    model_name = 'model_D{}_{}_{}x{}.pt'.format(step_size,num_inputs,num_layers,layer_size)
+    dataset = net.DataSet(train_data, val_data, test_data, dt, step_size, model_steps)
+    model_name = 'model_D{}.pt'.format(step_size)
 
 # create/load model object
     try:
@@ -89,3 +99,4 @@ for k in range(k_max+1):
     model.train_net(dataset, max_epoch=max_epoch, batch_size=batch_size, lr=lr,
                 model_path=os.path.join(model_dir, model_name))
 
+import plot_models

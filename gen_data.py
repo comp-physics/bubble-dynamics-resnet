@@ -1,49 +1,42 @@
 # Created by Scott Sims 10/21/2021
 # Rayleigh-Plesset Data Generation for Multiscale Hierarchical Time-Steppers with Residual Neural Networks
 
-import sys
 import os
 import numpy as np
 import scipy as sp
 #from tqdm.notebook import tqdm
 from scipy.integrate import solve_ivp
 import matplotlib.pyplot as plt
+import yaml
 
 #=========================================================
 # Command Line Arguments
 #=========================================================
-num_arg = len(sys.argv)
-if num_arg != 16:
-    msg = "Expected 16 arguments but counted {}".format(num_arg)
-    msg = msg + "\n| system | dt | k_max | num_inputs | num_inputs | steps_min | P_min | P_max |"
-    msg = msg + "\n| R_min | R_max | R_test | R'_min | R'_max | R'_test | n_train | n_val | n_test |"
-    sys.exit(msg)
-
-system = sys.argv[0]
-dt = sys.argv[1]
-k_max = sys.argv[2]
-num_inputs = sys.argv[3]
-steps_min = sys.argv[4]
-P_min = sys.argv[5]
-P_max = sys.argv[6]
-R_min = sys.argv[7]
-R_max = sys.argv[8]
-R_test = sys.argv[9]
-Rdot_min = sys.argv[10]
-Rdot_max = sys.argv[11]
-Rdot_test = sys.argv[12]
-n_train = sys.argv[13]
-n_val = sys.argv[14]
-n_test = sys.argv[15]
-
-#=========================================================
-# Directories and Paths
-#=========================================================
-data_dir = os.path.join(os.getcwd(), '/data/', system)
-if not os.path.exists(data_dir):
-    os.makedirs(data_dir)
-file_fig_data = "plot_data_{}".format(system)
-file_fig_data = os.path.abspath( os.path.join(data_dir, file_fig_data) )
+# print("| system = {0:s} | dt={1:} | k_max={2:} | num_inputs={3:} | num_layers={4:} | layer_size={5:} |".format(system,dt,k_max,num_inputs,num_layers,layer_size) )
+file_parameters = open("parameters.yaml", 'r')
+dictionary = yaml.load(file_parameters, loader=yaml.FullLoader)
+file_parameters.close()
+#---------------------------------------
+system = dictionary[system]
+dt = dictionary[dt]
+k_max = dictionary[k_max]
+steps_min = dictionary[steps_min]
+global u
+u = dictionary[u]
+P_min = dictionary[P_min]
+P_max = dictionary[P_max]
+R_min = dictionary[R_min]
+R_max = dictionary[R_max]
+R_test = dictionary[R_test]
+Rdot_min = dictionary[Rdot_min]
+Rdot_max = dictionary[Rdot_max]
+Rdot_test = dictionary[Rdot_test]
+n_train = dictionary[n_train]
+n_val = dictionary[n_val]
+n_test = dictionary[n_test]
+num_layers = dictionary[num_layers]
+layer_size = dictionary[layer_size]
+num_inputs = dictionary[num_inputs]
 
 #=========================================================
 # Constants
@@ -57,6 +50,15 @@ abs_tol = 1e-10
 # tau = Rref * (rho / P0) ** (1 / 2)
 
 #=========================================================
+# Directories and Paths
+#=========================================================
+data_folder = 'data_dt={}_steps={}_P={}-{}_R={}-{}_(train|val|test)=({}|{}|{}).pt'.format(dt, n_steps, P_min, P_max, R_min, R_max, n_train, n_val, n_test)
+data_dir = os.path.join(os.getcwd(), '/data/', system)
+if not os.path.exists(data_dir):
+    os.makedirs(data_dir)
+file_fig_data = os.path.abspath( os.path.join(data_dir, "plot_data_{}".format(system)) )
+
+#=========================================================
 # ODE - Rayleigh-Plesset
 #=========================================================
 def ode_rp(t, R):
@@ -65,8 +67,9 @@ def ode_rp(t, R):
     # R[2] = R'(t)
     #----------------------------------------------------
     # CONSTANTS
+    global u
     R0 = 100e-6  # m                 50.00e-6
-    u = 0 * 8.63e-4  # Pa * s      1.00e-3
+    # u = 8.63e-4  # Pa * s      1.00e-3
     Pv = 3.538e3  # Pa             2.34e3
     exponent = 1.4
     P0 = 0.8e5  # Pa             3.28e4
@@ -78,7 +81,7 @@ def ode_rp(t, R):
     v = u / rho
     S_hat = P0 * Rref / S
     Ca = (P0 - Pv) / P0
-    if (v == 0):
+    if (v == 0.0):
         Re = np.inf
     else:
         Re = (Rref / v) * (P0 / rho) ** (1 / 2)
@@ -127,8 +130,8 @@ test_data = np.zeros((n_test, n_steps + 1, num_inputs))
 print('generating testing trials ...')
 P_samples = np.linspace(P_min, P_max, n_test)
 for i in range(n_test):
-    P = P_samples[i]
-    y_init = [P, R_test, Rdot_test]
+    P_test = P_samples[i]
+    y_init = [P_test, R_test, Rdot_test]
     sol = solve_ivp(ode_rp, t_span=[0, tmax], y0=y_init, t_eval=t, method='RK45', rtol=rel_tol, atol=abs_tol)
     test_data[i, :, :] = sol.y.T
 
