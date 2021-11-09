@@ -32,27 +32,35 @@ file_parameters.close()
 system = dictionary[system]
 dt = dictionary[dt]
 k_max = dictionary[k_max]
-num_inputs = dictionary[num_inputs]
-num_layers = dictionary[num_layers]
-layer_size = dictionary[layer_size]
+steps_min = dictionary[steps_min]
+steps_max = dictionary[steps_max]
 P_min = dictionary[P_min]
 P_max = dictionary[P_max]
 R_min = dictionary[R_min]
 R_max = dictionary[R_max]
 R_test = dictionary[R_test]
+Rdot_min = dictionary[Rdot_min]
+Rdot_max = dictionary[Rdot_max]
+Rdot_test = dictionary[Rdot_test]
+n_train = dictionary[n_train]
+n_val = dictionary[n_val]
+n_test = dictionary[n_test]
+num_layers = dictionary[num_layers]
+layer_size = dictionary[layer_size]
+num_inputs = dictionary[num_inputs]
 
 #=========================================================
 # Directories and Paths
 #=========================================================
 n_steps = np.int64(steps_min * 2**k_max)
-data_folder = 'data_dt={}_tmax={}_P={}-{}_R={}-{}_(train|val|test)=({}|{}|{}).pt'.format(dt, n_steps, P_min, P_max, R_min, R_max, n_train, n_val, n_test)
-data_dir = os.path.join(os.getcwd(), '/data/', data_folder)
+data_folder = 'data_dt={}_steps={}_P={}-{}_R={}-{}_(train|val|test)=({}|{}|{}).pt'.format(dt, n_steps, P_min, P_max, R_min, R_max, n_train, n_val, n_test)
+data_dir = os.path.join(os.getcwd(), 'data', data_folder)
 model_folder = 'models_dt={}_P={}-{}_R={}-{}_inputs={}_resnet={}x{}.pt'.format(dt, P_min, P_max, R_min, R_max, num_inputs, num_layers, layer_size)
-model_dir = os.path.join(os.getcwd(), '/models/', model_folder)
+model_dir = os.path.join(os.getcwd(), 'models', model_folder)
 if not os.path.exists(data_dir):
-    sys.exit("Cannot find folder ../data/{} in current directory".format(system))
+    sys.exit("Cannot find folder ../data/{} in current directory".format(data_folder))
 if not os.path.exists(model_dir):
-    sys.exit("Cannot find folder ../models/{} in current directory".format(system))
+    sys.exit("Cannot find folder ../models/{} in current directory".format(data_folder))
 
 # file names for figures
 file_fig_uniscale = 'plot_uniscale_{}.png'.format(system)
@@ -110,18 +118,17 @@ criterion = torch.nn.MSELoss(reduction='none')
 now = datetime.now()
 date_time = now.strftime("%Y_%m_%d_%H_%M_%S")
 
-
 # create directory for figures
-figs_folder = 'figures_dt={}_tmax={}_P={}-{}_R0={}_inputs={}_resnet={}x{}.pt'.format(dt, dt*n_steps, P_min, P_max, R_test, num_inputs, num_layers, layer_size)
-figs_dir = os.path.abspath(os.path.join(os.getcwd(),'/figures/',figs_folder) )
-if not os.path.exists(figs_dir):
-    os.makedirs(figs_dir)
+#figs_folder = 'figures_dt={}_steps={}_P={}-{}_R0={}_inputs={}_resnet={}x{}.pt'.format(dt, n_steps, P_min, P_max, R_test, num_inputs, num_layers, layer_size)
+figure_dir = model_dir
+if not os.path.exists(figure_dir):
+    os.makedirs(figure_dir)
 
 # paths for figures
-file_fig_uniscale = os.path.abspath( os.path.join(figs_dir, file_fig_uniscale) )
-file_fig_mse_models = os.path.abspath( os.path.join(figs_dir, file_fig_mse_models) )
-file_fig_mse_multiscale = os.path.abspath( os.path.join(figs_dir, file_fig_mse_multiscale) )
-file_fig_multiscale = os.path.abspath( os.path.join(figs_dir, file_fig_multiscale) )
+file_fig_uniscale = os.path.abspath( os.path.join(figure_dir, file_fig_uniscale) )
+file_fig_mse_models = os.path.abspath( os.path.join(figure_dir, file_fig_mse_models) )
+file_fig_mse_multiscale = os.path.abspath( os.path.join(figure_dir, file_fig_mse_multiscale) )
+file_fig_multiscale = os.path.abspath( os.path.join(figure_dir, file_fig_multiscale) )
 
 #==========================================================
 # Plot Single-Scale Time-Steppers
