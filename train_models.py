@@ -1,16 +1,17 @@
-# ### created by Yuying Liu, 04/30/2020
 # ## updated by Scott Sims, 10/25/2021
+# ## created by Yuying Liu, 04/30/2020
 
 import os
 import sys
 import torch
 import numpy as np
 import yaml
+from shutil import copyfile
 
 module_path = os.path.abspath(os.path.join(os.getcwd(),'src'))
 if module_path not in sys.path:
     sys.path.append(module_path)
-    
+
 import ResNet as net
 
 #=========================================================
@@ -53,14 +54,18 @@ max_epoch = 100000            # the maximum training epoch
 # Directories and Paths
 #=========================================================
 n_steps = np.int64(steps_min * 2**k_max)
-data_folder = 'data_dt={}_tmax={}_P={}-{}_R={}-{}_(train|val|test)=({}|{}|{}).pt'.format(dt, n_steps, P_min, P_max, R_min, R_max, n_train, n_val, n_test)
-data_dir = os.path.join(os.getcwd(), '/data/', data_folder)
-model_folder = 'models_dt={}_P={}-{}_R={}-{}_inputs={}_resnet={}x{}.pt'.format(dt, P_min, P_max, R_min, R_max, num_inputs, num_layers, layer_size)
-model_dir = os.path.join(os.getcwd(), '/models/', model_folder)
+data_folder = 'data_dt={}_steps={}_P={}-{}_R={}-{}_(train|val|test)=({}|{}|{}).pt'.format(dt, n_steps, P_min, P_max, R_min, R_max, n_train, n_val, n_test)
+data_dir = os.path.join(os.getcwd(), 'data', data_folder)
+model_folder = 'models_dt={}_steps={}_P={}-{}_R={}-{}_inputs={}_resnet={}x{}.pt'.format(dt, n_steps, P_min, P_max, R_min, R_max, num_inputs, num_layers, layer_size)
+model_dir = os.path.join(os.getcwd(), 'models', model_folder)
 if not os.path.exists(data_dir):
-    sys.exit("Cannot find folder ../data/{} in current directory".format(system))
+    sys.exit("Cannot find folder ../data/{} in current directory".format(data_folder))
 if not os.path.exists(model_dir):
     os.makedirs(model_dir)
+
+param_source = os.path.abspath(os.path.join(os.getcwd(), "parameters.yaml"))
+param_dest = os.path.abspath(os.path.join(model_dir, "parameters.yaml"))
+copyfile(param_source, param_dest)
 
 #=========================================================
 # Load Data
@@ -82,11 +87,11 @@ for k in range(k_max+1):
     model_steps = np.int64(n_steps / step_size)
     model_steps = np.min( [model_steps, steps_max] )
 
-# create dataset object
+    # create dataset object
     dataset = net.DataSet(train_data, val_data, test_data, dt, step_size, model_steps)
     model_name = 'model_D{}.pt'.format(step_size)
 
-# create/load model object
+    # create/load model object
     try:
         device = 'cuda' if torch.cuda.is_available() else 'cpu'
         model = torch.load(os.path.join(model_dir, model_name), map_location=device)
@@ -95,7 +100,7 @@ for k in range(k_max+1):
         print('create model {} ...'.format(model_name))
         model = net.ResNet(arch=arch, dt=dt, step_size=step_size)
 
-# training
+    # training
     model.train_net(dataset, max_epoch=max_epoch, batch_size=batch_size, lr=lr,
                 model_path=os.path.join(model_dir, model_name))
 

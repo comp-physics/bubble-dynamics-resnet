@@ -1,13 +1,13 @@
-# Created by Scott Sims 10/21/2021
+# Created by Scott Sims 10/25/2021
 # Rayleigh-Plesset Data Generation for Multiscale Hierarchical Time-Steppers with Residual Neural Networks
 
 import os
 import numpy as np
-import scipy as sp
-#from tqdm.notebook import tqdm
+# import scipy as sp
 from scipy.integrate import solve_ivp
 import matplotlib.pyplot as plt
 import yaml
+from shutil import copyfile
 
 #=========================================================
 # Command Line Arguments
@@ -46,6 +46,8 @@ tmax = dt*n_steps
 t = np.linspace(0, tmax, n_steps + 1)
 rel_tol = 1e-10
 abs_tol = 1e-10
+global EPS
+EPS = np.finfo(float).eps
 # w2 = ( 3*k*(P0-Pv) / (R0**2) + 2 * (3*k - 1) * S / (R0**3) - 8 * (u**2) / (rho*R0**4) )/rho
 # tau = Rref * (rho / P0) ** (1 / 2)
 
@@ -53,10 +55,14 @@ abs_tol = 1e-10
 # Directories and Paths
 #=========================================================
 data_folder = 'data_dt={}_steps={}_P={}-{}_R={}-{}_(train|val|test)=({}|{}|{}).pt'.format(dt, n_steps, P_min, P_max, R_min, R_max, n_train, n_val, n_test)
-data_dir = os.path.join(os.getcwd(), '/data/', system)
+data_dir = os.path.join(os.getcwd(), 'data', data_folder)
 if not os.path.exists(data_dir):
     os.makedirs(data_dir)
-file_fig_data = os.path.abspath( os.path.join(data_dir, "plot_data_{}".format(system)) )
+
+param_source = os.path.abspath(os.path.join(os.getcwd(), "parameters.yaml"))
+param_dest = os.path.abspath(os.path.join(data_dir, "parameters.yaml"))
+copyfile(param_source, param_dest)
+
 
 #=========================================================
 # ODE - Rayleigh-Plesset
@@ -67,7 +73,7 @@ def ode_rp(t, R):
     # R[2] = R'(t)
     #----------------------------------------------------
     # CONSTANTS
-    global u
+    global u, EPS
     R0 = 100e-6  # m                 50.00e-6
     # u = 8.63e-4  # Pa * s      1.00e-3
     Pv = 3.538e3  # Pa             2.34e3
@@ -81,7 +87,7 @@ def ode_rp(t, R):
     v = u / rho
     S_hat = P0 * Rref / S
     Ca = (P0 - Pv) / P0
-    if (v == 0.0):
+    if (v < EPS):
         Re = np.inf
     else:
         Re = (Rref / v) * (P0 / rho) ** (1 / 2)
@@ -146,22 +152,25 @@ np.save(os.path.join(data_dir, 'test.npy'), test_data)
 # Plot 3 Samples of Data (if num_plots=3)
 #=========================================================
 num_plots = 3
-i_samples = np.int64(np.round(np.linspace(0, n_test-1, num_plots)))
-fig, axs = plt.subplots(3, 1, figsize=(30, 10*3*num_plots))
+j_samples = np.int64(np.round(np.linspace(0, n_test-1, num_plots)))
+fig, axs = plt.subplots(num_plots, 1, figsize=(30, 10*3*num_plots))
 
-for i in i_samples:
-    P_t = test_data[i, :, 0]
-    R_t = test_data[i, :, 1]
-    Rdot_t = test_data[i, :, 2]
-    axs[i].plot(t, P_t, color='tab:red', label='$P(t)$')
-    axs[i].plot(t, R_t, color='tab:blue', label='$R(t)$')
+
+for it in range(0, num_plots):
+    j = j_samples[it]
+    P_t = test_data[j, :, 0]
+    R_t = test_data[j, :, 1]
+    Rdot_t = test_data[j, :, 2]
+    axs[it].plot(t, P_t, color='tab:red', label='$P(t)$')
+    axs[it].plot(t, R_t, color='tab:blue', label='$R(t)$')
     # plt.plot(t, Rdot_t, color='tab:green', label='$\dot{R}(t)$')
-    axs[i].legend(fontsize=30, loc='upper center', ncol=3, bbox_to_anchor=(0.5, 1.2))
-    axs[i].xlabel('t / $t_0$')
-    axs[i].ylabel('R / $R_0$')
+    axs[it].legend(fontsize=30, loc='upper center', ncol=3, bbox_to_anchor=(0.5, 1.2))
+    axs[it].xlabel('t / $t_0$')
+    axs[it].ylabel('R / $R_0$')
     parameters = '$P(t=0)=$ {0:.3f}\n $R(t=0)=$ {1:.3f}\n $ \dot{{R}} (t=0)=$ {2:.3f}\n'.format(P_t[0], R_t[0], Rdot_t[0])
     props = dict(boxstyle='round', facecolor='wheat', alpha=0.25)
-    axs[i].text(0.6*tmax, max(R_t), parameters, fontsize=14, verticalalignment='top', bbox=props)
+    axs[it].text(0.6*tmax, max(R_t), parameters, fontsize=14, verticalalignment='top', bbox=props)
 
 plt.show()
-plt.savefig(file_fig_data)
+file_fig_data = os.path.abspath(os.path.join(data_dir, "data_sample.png"))
+plt.savefig(file_fig_data, dpi=300)
