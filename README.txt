@@ -34,7 +34,7 @@ Calls the algorithms listed above in the following order:
 =============================================================
 parameters.yml 
 =============================================================
-Adjust parameters for generating data and training your ResNet time-steppers. 
+Adjust parameters for generating data and training your ResNets (time-steppers). 
 Read by algorithms as a Python dictionary. 
 --------------------------------------------------------------
 (1) Parameters for both data and training time-steppers (ResNets)
@@ -74,6 +74,6 @@ Rdot_test = initial velocity (t=0) for test ODE data, RP-equation
 --------------------------------------------------------------
 (4) Parameters for ResNet architecture
 --------------------------------------------------------------
-layer_size = number of nodes/weights in ResNet layer
+layer_size = number of nodes/weights in each ResNet layer
 num_layers = number of ResNet layers, each of size 'layer_size'
-num_inputs = number of ResNet inputs, which is also be the number of ResNet outputs (same number of equations for system of ODEs)
+num_inputs = number of ResNet inputs, which is also be the number of ResNet outputs (same as the number of equations for system of ODEs)
