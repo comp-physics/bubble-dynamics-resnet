@@ -1,4 +1,4 @@
-# ## updated by Scott Sims, 10/25/2021
+# ## updated by Scott Sims, 11/09/2021
 # ## created by Yuying Liu, 04/30/2020
 
 import os
@@ -17,30 +17,29 @@ import ResNet as net
 #=========================================================
 # Command Line Arguments
 #=========================================================
-# print("| system = {0:s} | dt={1:} | k_max={2:} | num_inputs={3:} | num_layers={4:} | layer_size={5:} |".format(system,dt,k_max,num_inputs,num_layers,layer_size) )
-file_parameters = open("parameters.yaml", 'r')
-dictionary = yaml.load(file_parameters, loader=yaml.FullLoader)
-file_parameters.close()
+with open("parameters.yml", 'r') as f:
+    dictionary = yaml.safe_load(f)#, Loader=yaml.FullLoader)
 #---------------------------------------
-system = dictionary[system]
-dt = dictionary[dt]
-k_max = dictionary[k_max]
-steps_min = dictionary[steps_min]
-steps_max = dictionary[steps_max]
-P_min = dictionary[P_min]
-P_max = dictionary[P_max]
-R_min = dictionary[R_min]
-R_max = dictionary[R_max]
-R_test = dictionary[R_test]
-Rdot_min = dictionary[Rdot_min]
-Rdot_max = dictionary[Rdot_max]
-Rdot_test = dictionary[Rdot_test]
-n_train = dictionary[n_train]
-n_val = dictionary[n_val]
-n_test = dictionary[n_test]
-num_layers = dictionary[num_layers]
-layer_size = dictionary[layer_size]
-num_inputs = dictionary[num_inputs]
+system = dictionary['system']
+dt = dictionary['dt']
+k_max = dictionary['k_max']
+steps_min = dictionary['steps_min']
+steps_max = dictionary['steps_max']
+P_min = dictionary['P_min']
+P_max = dictionary['P_max']
+R_min = dictionary['R_min']
+R_max = dictionary['R_max']
+R_test = dictionary['R_test']
+Rdot_min = dictionary['Rdot_min']
+Rdot_max = dictionary['Rdot_max']
+Rdot_test = dictionary['Rdot_test']
+n_train = dictionary['n_train']
+n_val = dictionary['n_val']
+n_test = dictionary['n_test']
+batch_size = dictionary['batch_size']
+num_layers = dictionary['num_layers']
+layer_size = dictionary['layer_size']
+num_inputs = dictionary['num_inputs']
 #---------------------------------------
 print("ResNet Architecture: {0:}-in | {1:}x{2:} | {3:}-out".format(num_inputs, num_layers, layer_size, num_inputs))
 arch = [num_inputs]
@@ -63,8 +62,8 @@ if not os.path.exists(data_dir):
 if not os.path.exists(model_dir):
     os.makedirs(model_dir)
 
-param_source = os.path.abspath(os.path.join(os.getcwd(), "parameters.yaml"))
-param_dest = os.path.abspath(os.path.join(model_dir, "parameters.yaml"))
+param_source = os.path.abspath(os.path.join(os.getcwd(), "parameters.yml"))
+param_dest = os.path.abspath(os.path.join(model_dir, "parameters.yml"))
 copyfile(param_source, param_dest)
 
 #=========================================================
@@ -74,6 +73,7 @@ train_data = np.load(os.path.join(data_dir, 'train.npy'))
 val_data = np.load(os.path.join(data_dir, 'val.npy'))
 test_data = np.load(os.path.join(data_dir, 'test.npy'))
 n_train = train_data.shape[0]
+print('n_train = {}'.format(n_train) )
 n_val = val_data.shape[0]
 n_test = test_data.shape[0]
 n_steps = test_data.shape[1] - 1

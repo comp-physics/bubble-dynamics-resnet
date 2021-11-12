@@ -1,4 +1,4 @@
-# Created by Scott Sims 10/25/2021
+# Created by Scott Sims 11/09/2021
 # Rayleigh-Plesset Data Generation for Multiscale Hierarchical Time-Steppers with Residual Neural Networks
 
 import os
@@ -12,31 +12,29 @@ from shutil import copyfile
 #=========================================================
 # Command Line Arguments
 #=========================================================
-# print("| system = {0:s} | dt={1:} | k_max={2:} | num_inputs={3:} | num_layers={4:} | layer_size={5:} |".format(system,dt,k_max,num_inputs,num_layers,layer_size) )
-file_parameters = open("parameters.yaml", 'r')
-dictionary = yaml.load(file_parameters, loader=yaml.FullLoader)
-file_parameters.close()
+with open("parameters.yml", 'r') as f:
+    dictionary = yaml.safe_load(f)#, Loader=yaml.FullLoader)
 #---------------------------------------
-system = dictionary[system]
-dt = dictionary[dt]
-k_max = dictionary[k_max]
-steps_min = dictionary[steps_min]
+system = dictionary['system']
+dt = dictionary['dt']
+k_max = dictionary['k_max']
+steps_min = dictionary['steps_min']
 global u
-u = dictionary[u]
-P_min = dictionary[P_min]
-P_max = dictionary[P_max]
-R_min = dictionary[R_min]
-R_max = dictionary[R_max]
-R_test = dictionary[R_test]
-Rdot_min = dictionary[Rdot_min]
-Rdot_max = dictionary[Rdot_max]
-Rdot_test = dictionary[Rdot_test]
-n_train = dictionary[n_train]
-n_val = dictionary[n_val]
-n_test = dictionary[n_test]
-num_layers = dictionary[num_layers]
-layer_size = dictionary[layer_size]
-num_inputs = dictionary[num_inputs]
+u = dictionary['u']
+P_min = dictionary['P_min']
+P_max = dictionary['P_max']
+R_min = dictionary['R_min']
+R_max = dictionary['R_max']
+R_test = dictionary['R_test']
+Rdot_min = dictionary['Rdot_min']
+Rdot_max = dictionary['Rdot_max']
+Rdot_test = dictionary['Rdot_test']
+n_train = dictionary['n_train']
+n_val = dictionary['n_val']
+n_test = dictionary['n_test']
+num_layers = dictionary['num_layers']
+layer_size = dictionary['layer_size']
+num_inputs = dictionary['num_inputs']
 
 #=========================================================
 # Constants
@@ -59,8 +57,8 @@ data_dir = os.path.join(os.getcwd(), 'data', data_folder)
 if not os.path.exists(data_dir):
     os.makedirs(data_dir)
 
-param_source = os.path.abspath(os.path.join(os.getcwd(), "parameters.yaml"))
-param_dest = os.path.abspath(os.path.join(data_dir, "parameters.yaml"))
+param_source = os.path.abspath(os.path.join(os.getcwd(), "parameters.yml"))
+param_dest = os.path.abspath(os.path.join(data_dir, "parameters.yml"))
 copyfile(param_source, param_dest)
 
 
@@ -147,7 +145,7 @@ for i in range(n_test):
 np.save(os.path.join(data_dir, 'train.npy'), train_data)
 np.save(os.path.join(data_dir, 'val.npy'), val_data)
 np.save(os.path.join(data_dir, 'test.npy'), test_data)
-
+print('data generation complete')
 #=========================================================
 # Plot 3 Samples of Data (if num_plots=3)
 #=========================================================
@@ -165,8 +163,8 @@ for it in range(0, num_plots):
     axs[it].plot(t, R_t, color='tab:blue', label='$R(t)$')
     # plt.plot(t, Rdot_t, color='tab:green', label='$\dot{R}(t)$')
     axs[it].legend(fontsize=30, loc='upper center', ncol=3, bbox_to_anchor=(0.5, 1.2))
-    axs[it].xlabel('t / $t_0$')
-    axs[it].ylabel('R / $R_0$')
+    axs[it].set_xlabel('t / $t_0$')
+    axs[it].set_ylabel('R / $R_0$')
     parameters = '$P(t=0)=$ {0:.3f}\n $R(t=0)=$ {1:.3f}\n $ \dot{{R}} (t=0)=$ {2:.3f}\n'.format(P_t[0], R_t[0], Rdot_t[0])
     props = dict(boxstyle='round', facecolor='wheat', alpha=0.25)
     axs[it].text(0.6*tmax, max(R_t), parameters, fontsize=14, verticalalignment='top', bbox=props)

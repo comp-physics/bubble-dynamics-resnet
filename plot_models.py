@@ -1,6 +1,6 @@
 # # Multiscale HiTS Visuals (updated visuals)
 
-# ## updated by Scott Sims 10/19/2021
+# ## updated by Scott Sims 11/09/2021
 # ## created by Yuying Liu, 05/07/2020
 
 
@@ -13,7 +13,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 #import matplotlib.gridspec as gridspec
 import yaml
-from datetime import datetime
+#from datetime import datetime
 
 module_dir = os.path.abspath( os.path.join(os.getcwd(),'src') )
 if module_dir not in sys.path:
@@ -24,30 +24,28 @@ import ResNet as net
 #=========================================================
 # Command Line Arguments
 #=========================================================
-# print("| system = {0:s} | dt={1:} | k_max={2:} | num_inputs={3:} | num_layers={4:} | layer_size={5:} |".format(system,dt,k_max,num_inputs,num_layers,layer_size) )
-file_parameters = open("parameters.yaml", 'r')
-dictionary = yaml.load(file_parameters, loader=yaml.FullLoader)
-file_parameters.close()
+with open("parameters.yml", 'r') as f:
+    dictionary = yaml.safe_load(f)#, Loader=yaml.FullLoader)
 #---------------------------------------
-system = dictionary[system]
-dt = dictionary[dt]
-k_max = dictionary[k_max]
-steps_min = dictionary[steps_min]
-steps_max = dictionary[steps_max]
-P_min = dictionary[P_min]
-P_max = dictionary[P_max]
-R_min = dictionary[R_min]
-R_max = dictionary[R_max]
-R_test = dictionary[R_test]
-Rdot_min = dictionary[Rdot_min]
-Rdot_max = dictionary[Rdot_max]
-Rdot_test = dictionary[Rdot_test]
-n_train = dictionary[n_train]
-n_val = dictionary[n_val]
-n_test = dictionary[n_test]
-num_layers = dictionary[num_layers]
-layer_size = dictionary[layer_size]
-num_inputs = dictionary[num_inputs]
+system = dictionary['system']
+dt = dictionary['dt']
+k_max = dictionary['k_max']
+steps_min = dictionary['steps_min']
+steps_max = dictionary['steps_max']
+P_min = dictionary['P_min']
+P_max = dictionary['P_max']
+R_min = dictionary['R_min']
+R_max = dictionary['R_max']
+R_test = dictionary['R_test']
+Rdot_min = dictionary['Rdot_min']
+Rdot_max = dictionary['Rdot_max']
+Rdot_test = dictionary['Rdot_test']
+n_train = dictionary['n_train']
+n_val = dictionary['n_val']
+n_test = dictionary['n_test']
+num_layers = dictionary['num_layers']
+layer_size = dictionary['layer_size']
+num_inputs = dictionary['num_inputs']
 
 #=========================================================
 # Directories and Paths
@@ -115,8 +113,8 @@ criterion = torch.nn.MSELoss(reduction='none')
 # Create Directories and Files for Figures
 #========================================================================
 # date and time
-now = datetime.now()
-date_time = now.strftime("%Y_%m_%d_%H_%M_%S")
+#now = datetime.now()
+#date_time = now.strftime("%Y_%m_%d_%H_%M_%S")
 
 # create directory for figures
 #figs_folder = 'figures_dt={}_steps={}_P={}-{}_R0={}_inputs={}_resnet={}x{}.pt'.format(dt, n_steps, P_min, P_max, R_test, num_inputs, num_layers, layer_size)
@@ -335,5 +333,5 @@ plt.savefig(file_fig_multiscale)
 #=========================================================
 print('ensembled multiscale compute time = {:.4f} s'.format(multiscale_time))
 for i in range(len(times)):
-    print('{:.2f} | single scale  compute time = {:.4f} s'.format(step_sizes[i]*dt, times[i]))
+    print('{:.2f} | single scale compute time = {:.4f} s'.format(step_sizes[i]*dt, times[i]))
 
