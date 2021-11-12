@@ -11,7 +11,7 @@ Parameters are adjusted in file 'parameters.yml'
 =============================================================
 train_models.py
 =============================================================
-Trains ResNets with an adjustable architecture. Each ResNet is a time-stepper trained at different step-sizes.
+Trains ResNets with adjustable architectures. Each ResNet is a time-stepper trained at different step-sizes.
 Parameters are adjusted in file 'parameters.yml'
 
 =============================================================
