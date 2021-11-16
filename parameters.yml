@@ -1,8 +1,7 @@
 system: 'RP'
-dt: 0.01
+dt: 0.02
 k_max: 6       # steps_size = 2^k
-steps_min: 10  # step_min * 2^k_max * dt = t_final
-steps_max: 512 # limits training time for small step-sizes
+model_steps : 6 # T = dt * 2^k_max * model_steps
 #-------------------
 u: 0 # u = 8.63e-4  # Pa * s # Dynamic Viscosity
 R0: 100e - 6  # m                50.00e-6
@@ -20,13 +19,13 @@ R_min : 1.6
 R_max : 2.0
 R_test : 1.8
 Rdot_min : -0.1
-Rdot_max : 1.0
+Rdot_max : 0.1
 Rdot_test : 0.0
 #-------------------
-n_train : 2000   # training samples
-n_val : 400      # validation samples
-n_test : 400     # testing samples
-batch_size : 400 # training batches
-layer_size : 256 # weights in a layer
+n_train : 512    # training samples
+n_val : 128      # validation samples
+n_test : 128     # testing samples
+batch_size : 128 # training batches
+width : 256      # number of weights in a layer
 num_layers : 3   # layers
 num_inputs : 3   # ResNet inputs

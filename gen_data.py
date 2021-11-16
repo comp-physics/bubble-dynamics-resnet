@@ -1,4 +1,4 @@
-# Created by Scott Sims 11/09/2021
+# Created by Scott Sims 11/16/2021
 # Rayleigh-Plesset Data Generation for Multiscale Hierarchical Time-Steppers with Residual Neural Networks
 
 import os
@@ -18,7 +18,7 @@ with open("parameters.yml", 'r') as f:
 system = dictionary['system']
 dt = dictionary['dt']
 k_max = dictionary['k_max']
-steps_min = dictionary['steps_min']
+model_steps = dictionary['model_steps']
 global u
 u = dictionary['u']
 P_min = dictionary['P_min']
@@ -33,14 +33,14 @@ n_train = dictionary['n_train']
 n_val = dictionary['n_val']
 n_test = dictionary['n_test']
 num_layers = dictionary['num_layers']
-layer_size = dictionary['layer_size']
+width = dictionary['width']
 num_inputs = dictionary['num_inputs']
 
 #=========================================================
 # Constants
 #=========================================================
-n_steps = np.int64(steps_min * 2**k_max)
-tmax = dt*n_steps
+n_steps = np.int64(model_steps * 2**k_max)
+tmax = dt * n_steps
 t = np.linspace(0, tmax, n_steps + 1)
 rel_tol = 1e-10
 abs_tol = 1e-10
@@ -52,7 +52,7 @@ EPS = np.finfo(float).eps
 #=========================================================
 # Directories and Paths
 #=========================================================
-data_folder = 'data_dt={}_steps={}_P={}-{}_R={}-{}_(train|val|test)=({}|{}|{}).pt'.format(dt, n_steps, P_min, P_max, R_min, R_max, n_train, n_val, n_test)
+data_folder = 'data_dt={}_steps={}_P={}-{}_R={}-{}_|train|val|test|=|{}|{}|{}|'.format(dt, n_steps, P_min, P_max, R_min, R_max, n_train, n_val, n_test)
 data_dir = os.path.join(os.getcwd(), 'data', data_folder)
 if not os.path.exists(data_dir):
     os.makedirs(data_dir)
@@ -107,6 +107,7 @@ def ode_rp(t, R):
 # simulation parameters
 np.random.seed(2)
 
+#--------------------------------------------------------
 # simulate training trials
 train_data = np.zeros((n_train, n_steps + 1, num_inputs))
 print('generating training trials ...')
@@ -118,6 +119,26 @@ for i in range(n_train):
     sol = solve_ivp(ode_rp, t_span=[0, tmax], y0=y_init, t_eval=t, method='RK45', rtol=rel_tol, atol=abs_tol)
     train_data[i, :, :] = sol.y.T
 
+np.save(os.path.join(data_dir, 'train_D{}.npy'.format(2**k_max)), train_data)
+
+for k in range(0, k_max):
+    num_slices = 2**(k_max-k)
+    slice_steps = np.int64(n_steps / num_slices)
+    N = n_train * num_slices
+    step_size = 2**k
+    slice_data = np.zeros((N, slice_steps + 1, num_inputs))
+    for j in range(1, num_slices+1):
+        idx_start = (j-1) * slice_steps
+        idx_end = j * slice_steps
+        idx_slices = np.array(list(range(j-1, N-num_slices+j, num_slices)))
+        if( len(idx_slices) == (idx_end - idx_start + 1)):
+            slice_data[idx_slices, :, :] = train_data[:, idx_start:idx_end, :]
+        else:
+            print('ERROR: slice of train_data does not match number of indices for slice_data')
+
+    np.save(os.path.join(data_dir, 'train_D{}.npy'.format(step_size)), slice_data)
+
+#--------------------------------------------------------
 # simulate validation trials
 val_data = np.zeros((n_val, n_steps + 1, num_inputs))
 print('generating validation trials ...')
@@ -129,6 +150,25 @@ for i in range(n_val):
     sol = solve_ivp(ode_rp, t_span=[0, tmax], y0=y_init, t_eval=t, method='RK45', rtol=rel_tol, atol=abs_tol)
     val_data[i, :, :] = sol.y.T
 
+np.save(os.path.join(data_dir, 'val_D{}.npy'.format(2**k_max)), val_data)
+
+for k in range(0, k_max):
+    num_slices = 2**(k_max-k)
+    slice_steps = n_steps / num_slices
+    N = n_val * num_slices
+    step_size = 2**k
+    slice_data = np.zeros((N, slice_steps + 1, num_inputs))
+    for j in range(1, num_slices+1):
+        idx_start = (j-1) * slice_steps
+        idx_end = j * slice_steps
+        idx_slices = np.array(list(range(j-1, N-num_slices+j, num_slices)))
+        if( len(idx_slices) == (idx_end - idx_start + 1)):
+            slice_data[idx_slices, :, :] = val_data[:, idx_start:idx_end, :]
+        else:
+            print('ERROR: slice of val_data does not match number of indices for slice_data')
+
+    np.save(os.path.join(data_dir, 'val_D{}.npy'.format(step_size)), slice_data)
+#--------------------------------------------------------
 # simulate test trials
 test_data = np.zeros((n_test, n_steps + 1, num_inputs))
 print('generating testing trials ...')
@@ -139,13 +179,10 @@ for i in range(n_test):
     sol = solve_ivp(ode_rp, t_span=[0, tmax], y0=y_init, t_eval=t, method='RK45', rtol=rel_tol, atol=abs_tol)
     test_data[i, :, :] = sol.y.T
 
-#=========================================================
-# Save Data
-#=========================================================
-np.save(os.path.join(data_dir, 'train.npy'), train_data)
-np.save(os.path.join(data_dir, 'val.npy'), val_data)
 np.save(os.path.join(data_dir, 'test.npy'), test_data)
+
 print('data generation complete')
+
 #=========================================================
 # Plot 3 Samples of Data (if num_plots=3)
 #=========================================================

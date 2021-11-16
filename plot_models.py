@@ -1,6 +1,6 @@
 # # Multiscale HiTS Visuals (updated visuals)
 
-# ## updated by Scott Sims 11/09/2021
+# ## updated by Scott Sims 11/16/2021
 # ## created by Yuying Liu, 05/07/2020
 
 
@@ -30,8 +30,7 @@ with open("parameters.yml", 'r') as f:
 system = dictionary['system']
 dt = dictionary['dt']
 k_max = dictionary['k_max']
-steps_min = dictionary['steps_min']
-steps_max = dictionary['steps_max']
+model_steps = dictionary['model_steps']
 P_min = dictionary['P_min']
 P_max = dictionary['P_max']
 R_min = dictionary['R_min']
@@ -44,16 +43,16 @@ n_train = dictionary['n_train']
 n_val = dictionary['n_val']
 n_test = dictionary['n_test']
 num_layers = dictionary['num_layers']
-layer_size = dictionary['layer_size']
+width = dictionary['width']
 num_inputs = dictionary['num_inputs']
 
 #=========================================================
 # Directories and Paths
 #=========================================================
-n_steps = np.int64(steps_min * 2**k_max)
-data_folder = 'data_dt={}_steps={}_P={}-{}_R={}-{}_(train|val|test)=({}|{}|{}).pt'.format(dt, n_steps, P_min, P_max, R_min, R_max, n_train, n_val, n_test)
+n_steps = np.int64(model_steps * 2**k_max)
+data_folder = 'data_dt={}_steps={}_P={}-{}_R={}-{}_|train|val|test|=|{}|{}|{}|'.format(dt, n_steps, P_min, P_max, R_min, R_max, n_train, n_val, n_test)
 data_dir = os.path.join(os.getcwd(), 'data', data_folder)
-model_folder = 'models_dt={}_P={}-{}_R={}-{}_inputs={}_resnet={}x{}.pt'.format(dt, P_min, P_max, R_min, R_max, num_inputs, num_layers, layer_size)
+model_folder = 'models_dt={}_steps={}_P={}-{}_R={}-{}_resnet={}:{}x{}:{}'.format(dt, n_steps, P_min, P_max, R_min, R_max, num_inputs, num_layers, width, num_inputs)
 model_dir = os.path.join(os.getcwd(), 'models', model_folder)
 if not os.path.exists(data_dir):
     sys.exit("Cannot find folder ../data/{} in current directory".format(data_folder))
@@ -80,11 +79,10 @@ y_axis_fontsize = 30
 # Load Data and Models (then prepare some globals)
 #========================================================================
 # load validation set and test set
-val_data = np.load(os.path.join(data_dir, 'val.npy'))
 test_data = np.load(os.path.join(data_dir, 'test.npy'))
 
 # list of k-values: k = 0 ... k_max
-ks = list(range(k_max+1))
+ks = list(range(0,k_max+1))
 step_sizes = [2**k for k in ks]
 num_models = k_max+1
 
@@ -117,7 +115,7 @@ criterion = torch.nn.MSELoss(reduction='none')
 #date_time = now.strftime("%Y_%m_%d_%H_%M_%S")
 
 # create directory for figures
-#figs_folder = 'figures_dt={}_steps={}_P={}-{}_R0={}_inputs={}_resnet={}x{}.pt'.format(dt, n_steps, P_min, P_max, R_test, num_inputs, num_layers, layer_size)
+#figs_folder = 'figures_dt={}_steps={}_P={}-{}_R0={}_inputs={}_resnet={}x{}.pt'.format(dt, n_steps, P_min, P_max, R_test, num_inputs, num_layers, width)
 figure_dir = model_dir
 if not os.path.exists(figure_dir):
     os.makedirs(figure_dir)
@@ -216,22 +214,26 @@ plt.savefig(file_fig_mse_models)
 #==========================================================
 # cross validation (model selections) 
 start_idx = 0
-end_idx = k_max
+end_idx = k_max   # or len(models)-1
 best_mse = 1e+5
 # choose the largest time step
-for i in range(len(models)):
-    y_preds = net.vectorized_multi_scale_forecast(torch.tensor(val_data[:, 0, :]).float(), n_steps=n_steps, models=models[:len(models)-i])
+for k in range(0, k_max+1):
+    step_size = 2**k
+    val_data = np.load(os.path.join(data_dir, 'val_D{}.npy'.format(step_size)))
+    y_preds = net.vectorized_multi_scale_forecast(torch.tensor(val_data[:, 0, :]).float(), n_steps=n_steps, models=models[:len(models)-k])
     mse = criterion(torch.tensor(val_data[:, 1:, :]).float(), y_preds).mean().item()
     if mse <= best_mse:
-        end_idx = len(models)-i
+        end_idx = len(models)-k
         best_mse = mse
 
         # choose the smallest time step
-for i in range(end_idx):
-    y_preds = net.vectorized_multi_scale_forecast(torch.tensor(val_data[:, 0, :]).float(), n_steps=n_steps, models=models[i:end_idx])
+for k in range(0, end_idx):
+    step_size = 2**k
+    val_data = np.load(os.path.join(data_dir, 'val_D{}.npy'.format(step_size)))
+    y_preds = net.vectorized_multi_scale_forecast(torch.tensor(val_data[:, 0, :]).float(), n_steps=n_steps, models=models[k:end_idx])
     mse = criterion(torch.tensor(val_data[:, 1:, :]).float(), y_preds).mean().item()
     if mse <= best_mse:
-        start_idx = i
+        start_idx = k
         best_mse = mse
         
 
@@ -241,7 +243,7 @@ print('{} models chosen for Multiscale HiTS:'.format(num_k) )
 print('   k    = {} .. {}'.format(start_idx, end_idx) )
 print('  2^k   = {} .. {}'.format(2**start_idx, 2**end_idx ) )
 print('t-steps = {} .. {}\n'.format(dt*2**start_idx, dt*2**end_idx ) )
-
+del val_data
 
 #==========================================================
 # Plot Log(MSE) for Multi-scale vs Single
@@ -302,7 +304,7 @@ plt.plot(t, test_data[idx, 0:n_steps, 1], color='lightgray', linestyle='-', line
 #plt.plot(t, Rdot, color='black', linestyle='--', linewidth=5)
 #-------------------------------------------------------------
 high = end_idx
-low = np.max( [high-2,start_idx] )
+low = np.max( [high-2,start_idx] ) # just in case that (high-2)<0
 ks = list(range(low,high+1))
 iterate_k = iter( reversed(ks) )
 colors = iter( reversed(plt.cm.rainbow(np.linspace(0, 1, len(ks))) ) )
