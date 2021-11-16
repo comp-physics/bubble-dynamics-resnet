@@ -42,12 +42,11 @@ Read by algorithms as a Python dictionary.
 system = 'RP' stands for Rayleigh-Plesset and is used in file names saved by python scripts
 dt = smallest time step for data describing the Rayleigh-Plesset equation
 k_max = determines the largest time step for a ResNet to make predictions, e.g. time_step = 2^k * dt
-steps_min = minimum number of steps required for ResNet to make predictions (otherwise, largest time-stepper will be ineffective)
-steps_max = maximum number of steps allowed for ResNet to make predictions (otherwise, training is impractical)
-n_train = number of training data samples
-n_val = number of validation data samples
-n_test = number of test data samples
-batch_size = number of samples in a batch, sampled from training data
+model_steps = the number of steps the largest time-stepper takes during training, which will also be the number of steps all other time-steppers take during training.
+n_train = number of training samples for the largest time-stepper.
+n_val = number of validation samples for the largest time-stepper.
+n_test = number of test samples for all time-steppers.
+batch_size = number of samples in a batch, sampled from training data during training.
 --------------------------------------------------------------
 (2) Parameters for ODE (the Rayleigh-Plesset equation)
 --------------------------------------------------------------
@@ -74,6 +73,6 @@ Rdot_test = initial velocity (t=0) for test ODE data, RP-equation
 --------------------------------------------------------------
 (4) Parameters for ResNet architecture
 --------------------------------------------------------------
-layer_size = number of nodes/weights in each ResNet layer
+width = number of nodes/weights in each ResNet layer
 num_layers = number of ResNet layers, each of size 'layer_size'
 num_inputs = number of ResNet inputs, which is also be the number of ResNet outputs (same as the number of equations for system of ODEs)
