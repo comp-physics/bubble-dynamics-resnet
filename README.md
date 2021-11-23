@@ -26,7 +26,7 @@ This data is saved as a tensor for training and validating various ResNets.
 
 Parameters are adjusted in file *parameters.yml* (see below)
 
-##train_models.py
+## train_models.py
 
 Trains ResNets with an adjustable architecture. Each ResNet is a time-stepper trained at different step-sizes.
 
