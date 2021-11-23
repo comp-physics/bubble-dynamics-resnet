@@ -1,4 +1,4 @@
-# Created by Scott Sims 11/16/2021
+# Created by Scott Sims 11/23/2021
 # Rayleigh-Plesset Data Generation for Multiscale Hierarchical Time-Steppers with Residual Neural Networks
 
 import os
@@ -10,31 +10,14 @@ import yaml
 from shutil import copyfile
 
 #=========================================================
-# Command Line Arguments
+# Input Arguments
 #=========================================================
-with open("parameters.yml", 'r') as f:
-    dictionary = yaml.safe_load(f)#, Loader=yaml.FullLoader)
-#---------------------------------------
-system = dictionary['system']
-dt = dictionary['dt']
-k_max = dictionary['k_max']
-model_steps = dictionary['model_steps']
-global u
-u = dictionary['u']
-P_min = dictionary['P_min']
-P_max = dictionary['P_max']
-R_min = dictionary['R_min']
-R_max = dictionary['R_max']
-R_test = dictionary['R_test']
-Rdot_min = dictionary['Rdot_min']
-Rdot_max = dictionary['Rdot_max']
-Rdot_test = dictionary['Rdot_test']
-n_train = dictionary['n_train']
-n_val = dictionary['n_val']
-n_test = dictionary['n_test']
-num_layers = dictionary['num_layers']
-width = dictionary['width']
-num_inputs = dictionary['num_inputs']
+with open("parameters.yml", 'r') as stream:
+    D = yaml.safe_load(stream)
+
+for key in D:
+    globals()[str(key)] = D[key]
+    # transforms key-names from dictionary into global variables, then assigns them the dictionary-values
 
 #=========================================================
 # Constants
@@ -52,7 +35,7 @@ EPS = np.finfo(float).eps
 #=========================================================
 # Directories and Paths
 #=========================================================
-data_folder = 'data_dt={}_steps={}_P={}-{}_R={}-{}_|train|val|test|=|{}|{}|{}|'.format(dt, n_steps, P_min, P_max, R_min, R_max, n_train, n_val, n_test)
+data_folder = 'data_dt={}_steps={}_P={}-{}_R={}-{}_train.val.test={}.{}.{}'.format(dt, n_steps, P_min, P_max, R_min, R_max, n_train, n_val, n_test)
 data_dir = os.path.join(os.getcwd(), 'data', data_folder)
 if not os.path.exists(data_dir):
     os.makedirs(data_dir)
@@ -92,6 +75,7 @@ def ode_rp(t, R):
     #---------------------------------------------------
     # SYSTEM OF ODEs, the 1st and 2nd derivatives
     Cp = R[0] - 1
+
     dRdt = np.zeros(3)
     dRdt[0] = 0
     dRdt[1] = R[2]
@@ -101,10 +85,11 @@ def ode_rp(t, R):
     #---------------------------------------------------
     return dRdt
 
+
+
 #=========================================================
 # Data Generation
 #=========================================================
-# simulation parameters
 np.random.seed(2)
 
 #--------------------------------------------------------
@@ -116,25 +101,26 @@ for i in range(n_train):
     R = np.random.uniform(R_min, R_max)
     Rdot = np.random.uniform(Rdot_min, Rdot_max)
     y_init = [P, R, Rdot]
-    sol = solve_ivp(ode_rp, t_span=[0, tmax], y0=y_init, t_eval=t, method='RK45', rtol=rel_tol, atol=abs_tol)
+    sol = solve_ivp(ode_rp, t_span=[0, tmax], y0=y_init, t_eval=t, method='LSODA', rtol=rel_tol, atol=abs_tol)
     train_data[i, :, :] = sol.y.T
 
 np.save(os.path.join(data_dir, 'train_D{}.npy'.format(2**k_max)), train_data)
 
 for k in range(0, k_max):
-    num_slices = 2**(k_max-k)
-    slice_steps = np.int64(n_steps / num_slices)
+    step_size = np.int64(2**k)
+    slice_size = np.int64(model_steps * step_size)
+    num_slices = np.int64(n_steps/slice_size)
     N = n_train * num_slices
-    step_size = 2**k
-    slice_data = np.zeros((N, slice_steps + 1, num_inputs))
+    slice_data = np.zeros((N, slice_size + 1, num_inputs))
+    print('num_slices = {}'.format(num_slices))
+    print('slice_size = {}'.format(slice_size))
+    print('N = {}'.format(N))
+    print('step_size = {}'.format(step_size))
     for j in range(1, num_slices+1):
-        idx_start = (j-1) * slice_steps
-        idx_end = j * slice_steps
+        idx_start = (j-1) * slice_size
+        idx_end = j * slice_size
         idx_slices = np.array(list(range(j-1, N-num_slices+j, num_slices)))
-        if( len(idx_slices) == (idx_end - idx_start + 1)):
-            slice_data[idx_slices, :, :] = train_data[:, idx_start:idx_end, :]
-        else:
-            print('ERROR: slice of train_data does not match number of indices for slice_data')
+        slice_data[idx_slices, :, :] = train_data[:, idx_start:idx_end+1, :]
 
     np.save(os.path.join(data_dir, 'train_D{}.npy'.format(step_size)), slice_data)
 
@@ -147,25 +133,22 @@ for i in range(n_val):
     R = np.random.uniform(R_min, R_max)
     Rdot = np.random.uniform(Rdot_min, Rdot_max)
     y_init = [P, R, Rdot]
-    sol = solve_ivp(ode_rp, t_span=[0, tmax], y0=y_init, t_eval=t, method='RK45', rtol=rel_tol, atol=abs_tol)
+    sol = solve_ivp(ode_rp, t_span=[0, tmax], y0=y_init, t_eval=t, method='LSODA', rtol=rel_tol, atol=abs_tol)
     val_data[i, :, :] = sol.y.T
 
 np.save(os.path.join(data_dir, 'val_D{}.npy'.format(2**k_max)), val_data)
 
 for k in range(0, k_max):
-    num_slices = 2**(k_max-k)
-    slice_steps = n_steps / num_slices
+    step_size = np.int64(2**k)
+    slice_size = np.int64(model_steps * step_size)
+    num_slices = np.int64(n_steps/slice_size)
     N = n_val * num_slices
-    step_size = 2**k
-    slice_data = np.zeros((N, slice_steps + 1, num_inputs))
+    slice_data = np.zeros((N, slice_size + 1, num_inputs))
     for j in range(1, num_slices+1):
-        idx_start = (j-1) * slice_steps
-        idx_end = j * slice_steps
+        idx_start = (j-1) * slice_size
+        idx_end = j * slice_size
         idx_slices = np.array(list(range(j-1, N-num_slices+j, num_slices)))
-        if( len(idx_slices) == (idx_end - idx_start + 1)):
-            slice_data[idx_slices, :, :] = val_data[:, idx_start:idx_end, :]
-        else:
-            print('ERROR: slice of val_data does not match number of indices for slice_data')
+        slice_data[idx_slices, :, :] = val_data[:, idx_start:idx_end+1, :]
 
     np.save(os.path.join(data_dir, 'val_D{}.npy'.format(step_size)), slice_data)
 #--------------------------------------------------------
@@ -176,19 +159,20 @@ P_samples = np.linspace(P_min, P_max, n_test)
 for i in range(n_test):
     P_test = P_samples[i]
     y_init = [P_test, R_test, Rdot_test]
-    sol = solve_ivp(ode_rp, t_span=[0, tmax], y0=y_init, t_eval=t, method='RK45', rtol=rel_tol, atol=abs_tol)
+    sol = solve_ivp(ode_rp, t_span=[0, tmax], y0=y_init, t_eval=t, method='LSODA', rtol=rel_tol, atol=abs_tol)
     test_data[i, :, :] = sol.y.T
 
 np.save(os.path.join(data_dir, 'test.npy'), test_data)
 
 print('data generation complete')
 
+
 #=========================================================
 # Plot 3 Samples of Data (if num_plots=3)
 #=========================================================
 num_plots = 3
 j_samples = np.int64(np.round(np.linspace(0, n_test-1, num_plots)))
-fig, axs = plt.subplots(num_plots, 1, figsize=(30, 10*3*num_plots))
+fig, axs = plt.subplots(num_plots, 1, figsize=(plot_x_dim, 1.1*plot_y_dim*num_plots))
 
 
 for it in range(0, num_plots):
@@ -198,13 +182,13 @@ for it in range(0, num_plots):
     Rdot_t = test_data[j, :, 2]
     axs[it].plot(t, P_t, color='tab:red', label='$P(t)$')
     axs[it].plot(t, R_t, color='tab:blue', label='$R(t)$')
-    # plt.plot(t, Rdot_t, color='tab:green', label='$\dot{R}(t)$')
-    axs[it].legend(fontsize=30, loc='upper center', ncol=3, bbox_to_anchor=(0.5, 1.2))
-    axs[it].set_xlabel('t / $t_0$')
-    axs[it].set_ylabel('R / $R_0$')
+    axs[it].legend(fontsize=legend_fontsize, loc='upper center', ncol=3, bbox_to_anchor=(0.5, 1.2))
+    axs[it].set_xlabel('t / $t_0$',fontsize=x_label_fontsize)
+    axs[it].set_ylabel('R / $R_0$',fontsize=y_label_fontsize)
+    axs[it].tick_params(axis='both', which='major', labelsize=axis_fontsize)
     parameters = '$P(t=0)=$ {0:.3f}\n $R(t=0)=$ {1:.3f}\n $ \dot{{R}} (t=0)=$ {2:.3f}\n'.format(P_t[0], R_t[0], Rdot_t[0])
     props = dict(boxstyle='round', facecolor='wheat', alpha=0.25)
-    axs[it].text(0.6*tmax, max(R_t), parameters, fontsize=14, verticalalignment='top', bbox=props)
+    axs[it].text(0.6*tmax, max(R_t), parameters, fontsize=box_fontsize, verticalalignment='top', bbox=props)
 
 plt.show()
 file_fig_data = os.path.abspath(os.path.join(data_dir, "data_sample.png"))

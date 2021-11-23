@@ -1,6 +1,6 @@
 # # Multiscale HiTS Visuals (updated visuals)
 
-# ## updated by Scott Sims 11/16/2021
+# ## updated by Scott Sims 11/23/2021
 # ## created by Yuying Liu, 05/07/2020
 
 
@@ -22,42 +22,28 @@ if module_dir not in sys.path:
 import ResNet as net
 
 #=========================================================
-# Command Line Arguments
+# Input Arguments
 #=========================================================
-with open("parameters.yml", 'r') as f:
-    dictionary = yaml.safe_load(f)#, Loader=yaml.FullLoader)
-#---------------------------------------
-system = dictionary['system']
-dt = dictionary['dt']
-k_max = dictionary['k_max']
-model_steps = dictionary['model_steps']
-P_min = dictionary['P_min']
-P_max = dictionary['P_max']
-R_min = dictionary['R_min']
-R_max = dictionary['R_max']
-R_test = dictionary['R_test']
-Rdot_min = dictionary['Rdot_min']
-Rdot_max = dictionary['Rdot_max']
-Rdot_test = dictionary['Rdot_test']
-n_train = dictionary['n_train']
-n_val = dictionary['n_val']
-n_test = dictionary['n_test']
-num_layers = dictionary['num_layers']
-width = dictionary['width']
-num_inputs = dictionary['num_inputs']
+with open("parameters.yml", 'r') as stream:
+    D = yaml.safe_load(stream)
+
+for key in D:
+    globals()[str(key)] = D[key]
+    # transforms key-names from dictionary into global variables, then assigns them the dictionary-values
+
 
 #=========================================================
 # Directories and Paths
 #=========================================================
 n_steps = np.int64(model_steps * 2**k_max)
-data_folder = 'data_dt={}_steps={}_P={}-{}_R={}-{}_|train|val|test|=|{}|{}|{}|'.format(dt, n_steps, P_min, P_max, R_min, R_max, n_train, n_val, n_test)
+data_folder = 'data_dt={}_steps={}_P={}-{}_R={}-{}_train.val.test={}.{}.{}'.format(dt, n_steps, P_min, P_max, R_min, R_max, n_train, n_val, n_test)
 data_dir = os.path.join(os.getcwd(), 'data', data_folder)
-model_folder = 'models_dt={}_steps={}_P={}-{}_R={}-{}_resnet={}:{}x{}:{}'.format(dt, n_steps, P_min, P_max, R_min, R_max, num_inputs, num_layers, width, num_inputs)
+model_folder = 'models_dt={}_steps={}_P={}-{}_R={}-{}_resnet={}.{}x{}.{}'.format(dt, n_steps, P_min, P_max, R_min, R_max, num_inputs, num_layers, width, num_inputs)
 model_dir = os.path.join(os.getcwd(), 'models', model_folder)
 if not os.path.exists(data_dir):
     sys.exit("Cannot find folder ../data/{} in current directory".format(data_folder))
 if not os.path.exists(model_dir):
-    sys.exit("Cannot find folder ../models/{} in current directory".format(data_folder))
+    sys.exit("Cannot find folder ../models/{} in current directory".format(model_folder))
 
 # file names for figures
 file_fig_uniscale = 'plot_uniscale_{}.png'.format(system)
@@ -65,15 +51,7 @@ file_fig_mse_models = 'plot_MSE_models_{}.png'.format(system)
 file_fig_mse_multiscale = 'plot_MSE_multiscale_{}.png'.format(system)
 file_fig_multiscale = 'plot_multiscale_{}.png'.format(system)
 
-# plot properties
-plot_x_dim = 30
-plot_y_dim = 10
-title_fontsize = 40
-legend_fontsize = 30
-x_label_fontsize = 30
-y_label_fontsize = 30
-x_axis_fontsize = 30
-y_axis_fontsize = 30
+
 
 #========================================================================
 # Load Data and Models (then prepare some globals)
@@ -92,7 +70,7 @@ for step_size in step_sizes:
     model_name = 'model_D{}.pt'.format(step_size)
     models.append(torch.load(os.path.join(model_dir, model_name), map_location='cpu'))
 num_k = len(models)
-print('{} models loaded for time-stepping:'.format(num_models) ) 
+print('{} models loaded for time-stepping:'.format(num_models) )
 print('   k    = {} .. {}'.format(0, k_max) )
 print('  2^k   = {} .. {}'.format(1, step_sizes[k_max] ) )
 print('t-steps = {} .. {} \n'.format(dt, dt*step_sizes[k_max]) )
@@ -160,7 +138,7 @@ for model in models:
     axs[k].plot(t, R, linestyle='--', color=rgb, linewidth=6, label='$\Delta t = ${}dt'.format(step_sizes[k]) )
     #axs[k].plot(t, Rdot, linestyle='--', color='black', linewidth=6)
     axs[k].legend(fontsize=legend_fontsize, loc='upper center', ncol=5, bbox_to_anchor=(0.5, 1.17))
-    axs[k].tick_params(axis='both', which='major', labelsize=x_axis_fontsize)
+    axs[k].tick_params(axis='both', which='major', labelsize=axis_fontsize)
     axs[k].grid( axis='y' )
     #R_max = np.max( test_data[idx, 0:n_steps, 1] )
     #axs[k].set_ylim( [0, R_max*1.05] )
@@ -199,8 +177,8 @@ d_log = np.abs(max_log-min_log)
 mid_log = np.mean( [min_log, max_log] )
 plt.legend(fontsize=legend_fontsize, loc='upper center', ncol=6, bbox_to_anchor=(0.5, 1.24))
 plt.title('time-steps without interpolation', y=1.0, pad=-40, fontsize=title_fontsize)
-plt.xticks(fontsize=x_axis_fontsize)
-plt.yticks(fontsize=y_axis_fontsize)
+plt.xticks(fontsize=axis_fontsize)
+plt.yticks(fontsize=axis_fontsize)
 plt.xlabel('time',fontsize=x_label_fontsize)
 plt.ylabel('log(MSE)',fontsize=y_label_fontsize)
 plt.grid(axis = 'y')
@@ -218,7 +196,7 @@ end_idx = k_max   # or len(models)-1
 best_mse = 1e+5
 # choose the largest time step
 for k in range(0, k_max+1):
-    step_size = 2**k
+    step_size = np.int64(2**k)
     val_data = np.load(os.path.join(data_dir, 'val_D{}.npy'.format(step_size)))
     y_preds = net.vectorized_multi_scale_forecast(torch.tensor(val_data[:, 0, :]).float(), n_steps=n_steps, models=models[:len(models)-k])
     mse = criterion(torch.tensor(val_data[:, 1:, :]).float(), y_preds).mean().item()
@@ -228,7 +206,7 @@ for k in range(0, k_max+1):
 
         # choose the smallest time step
 for k in range(0, end_idx):
-    step_size = 2**k
+    step_size = np.int64(2**k)
     val_data = np.load(os.path.join(data_dir, 'val_D{}.npy'.format(step_size)))
     y_preds = net.vectorized_multi_scale_forecast(torch.tensor(val_data[:, 0, :]).float(), n_steps=n_steps, models=models[k:end_idx])
     mse = criterion(torch.tensor(val_data[:, 1:, :]).float(), y_preds).mean().item()
@@ -270,8 +248,8 @@ for k in range(len(preds_mse)):
     plt.plot(t, np.log10(mean), linestyle='-', color=rgb, linewidth=4, label='$\Delta\ t$={}dt'.format(step_sizes[k]))
 plt.plot(t, np.log10(multiscale_err), linestyle='-', color='k', linewidth=4, label='multiscale')
 plt.legend(fontsize=legend_fontsize, loc='upper center', ncol=6, bbox_to_anchor=(0.5, 1.2))
-plt.xticks(fontsize=x_axis_fontsize)
-plt.yticks(fontsize=y_axis_fontsize)
+plt.xticks(fontsize=axis_fontsize)
+plt.yticks(fontsize=axis_fontsize)
 plt.xlabel('time',fontsize=x_label_fontsize)
 plt.ylabel('log(MSE)',fontsize=y_label_fontsize)
 plt.grid(axis = 'y')
@@ -325,8 +303,8 @@ plt.ylabel('f(t)', rotation=0, fontsize=y_label_fontsize)
 num_cols = np.int64( np.ceil( (2+len(models))/2 ) )
 plt.legend(fontsize=legend_fontsize, loc='upper center', ncol=num_cols, bbox_to_anchor=(0.5, 1.22))
 #ax0.tick_params(axis='both', which='major', labelsize=20)
-plt.xticks(fontsize=x_axis_fontsize)
-plt.yticks(fontsize=y_axis_fontsize)
+plt.xticks(fontsize=axis_fontsize)
+plt.yticks(fontsize=axis_fontsize)
 plt.grid( axis='y')
 plt.savefig(file_fig_multiscale)
 

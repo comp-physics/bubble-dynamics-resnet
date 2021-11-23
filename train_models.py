@@ -1,4 +1,4 @@
-# ## updated by Scott Sims, 11/16/2021
+# ## updated by Scott Sims, 11/23/2021
 # ## created by Yuying Liu, 04/30/2020
 
 import os
@@ -15,30 +15,14 @@ if module_path not in sys.path:
 import ResNet as net
 
 #=========================================================
-# Command Line Arguments
+# Input Arguments
 #=========================================================
-with open("parameters.yml", 'r') as f:
-    dictionary = yaml.safe_load(f)#, Loader=yaml.FullLoader)
-#---------------------------------------
-system = dictionary['system']
-dt = dictionary['dt']
-k_max = dictionary['k_max']
-model_steps = dictionary['model_steps']
-P_min = dictionary['P_min']
-P_max = dictionary['P_max']
-R_min = dictionary['R_min']
-R_max = dictionary['R_max']
-R_test = dictionary['R_test']
-Rdot_min = dictionary['Rdot_min']
-Rdot_max = dictionary['Rdot_max']
-Rdot_test = dictionary['Rdot_test']
-n_train = dictionary['n_train']
-n_val = dictionary['n_val']
-n_test = dictionary['n_test']
-batch_size = dictionary['batch_size']
-num_layers = dictionary['num_layers']
-width = dictionary['width']
-num_inputs = dictionary['num_inputs']
+with open("parameters.yml", 'r') as stream:
+    D = yaml.safe_load(stream)
+
+for key in D:
+    globals()[str(key)] = D[key]
+    # transforms key-names from dictionary into global variables, then assigns them the dictionary-values
 #---------------------------------------
 print("ResNet Architecture: {0:}-in | {1:}x{2:} | {3:}-out".format(num_inputs, num_layers, width, num_inputs))
 arch = [num_inputs]
@@ -52,9 +36,9 @@ max_epoch = 100000            # the maximum training epoch
 # Directories and Paths
 #=========================================================
 n_steps = np.int64(model_steps * 2**k_max)
-data_folder = 'data_dt={}_steps={}_P={}-{}_R={}-{}_|train|val|test|=|{}|{}|{}|'.format(dt, n_steps, P_min, P_max, R_min, R_max, n_train, n_val, n_test)
+data_folder = 'data_dt={}_steps={}_P={}-{}_R={}-{}_train.val.test={}.{}.{}'.format(dt, n_steps, P_min, P_max, R_min, R_max, n_train, n_val, n_test)
 data_dir = os.path.join(os.getcwd(), 'data', data_folder)
-model_folder = 'models_dt={}_steps={}_P={}-{}_R={}-{}_resnet={}:{}x{}:{}'.format(dt, n_steps, P_min, P_max, R_min, R_max, num_inputs, num_layers, width, num_inputs)
+model_folder = 'models_dt={}_steps={}_P={}-{}_R={}-{}_resnet={}.{}x{}.{}'.format(dt, n_steps, P_min, P_max, R_min, R_max, num_inputs, num_layers, width, num_inputs)
 model_dir = os.path.join(os.getcwd(), 'models', model_folder)
 if not os.path.exists(data_dir):
     sys.exit("Cannot find folder ../data/{} in current directory".format(data_folder))
@@ -80,7 +64,7 @@ for k in range(0,k_max+1):
     n_val = val_data.shape[0]
     n_test = test_data.shape[0]
     n_steps = test_data.shape[1] - 1
-
+    print('number training samples = {}'.format(n_train))
     #=========================================================
     # Train Models, each with step_size = 2^k
     #=========================================================
@@ -93,10 +77,11 @@ for k in range(0,k_max+1):
     # create/load model object
     try:
         device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        print(device)
         model = torch.load(os.path.join(model_dir, model_name), map_location=device)
         model.device = device
     except:
-        print('create model {} ...'.format(model_name))
+        print('TRAIN: {} ...'.format(model_name))
         model = net.ResNet(arch=arch, dt=dt, step_size=step_size)
 
     # training
