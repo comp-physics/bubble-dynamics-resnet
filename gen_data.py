@@ -17,7 +17,7 @@ with open("parameters.yml", 'r') as stream:
 
 for key in D:
     globals()[str(key)] = D[key]
-    # transforms key-names from dictionary into global variables, then assigns them the dictionary-values
+    # transforms key-names from dictionary into global variables, then assigns those variables their respective key-values
 
 #=========================================================
 # Constants
