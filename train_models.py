@@ -64,7 +64,6 @@ for k in range(0,k_max+1):
     n_val = val_data.shape[0]
     n_test = test_data.shape[0]
     n_steps = test_data.shape[1] - 1
-    print('number training samples = {}'.format(n_train))
     #=========================================================
     # Train Models, each with step_size = 2^k
     #=========================================================
@@ -77,7 +76,6 @@ for k in range(0,k_max+1):
     # create/load model object
     try:
         device = 'cuda' if torch.cuda.is_available() else 'cpu'
-        print(device)
         model = torch.load(os.path.join(model_dir, model_name), map_location=device)
         model.device = device
     except:
@@ -85,7 +83,7 @@ for k in range(0,k_max+1):
         model = net.ResNet(arch=arch, dt=dt, step_size=step_size)
 
     # training
+    print('training samples: {}'.format(n_train))
+    print('device: {}'.format(device))
     model.train_net(dataset, max_epoch=max_epoch, batch_size=batch_size, lr=lr,
                 model_path=os.path.join(model_dir, model_name))
-
-import plot_models
