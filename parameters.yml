@@ -1,31 +1,40 @@
+---
 system: 'RP'
 dt: 0.02
 k_max: 6       # steps_size = 2^k
-model_steps : 6 # T = dt * 2^k_max * model_steps
+model_steps: 7 # T = dt * (2^k_max) * model_steps
 #-------------------
-u: 0 # u = 8.63e-4  # Pa * s # Dynamic Viscosity
-R0: 100e - 6  # m                50.00e-6
-Pv: 3.538e + 3  # Pa             2.34e3
-exponent : 1.4
-P0 : 0.8e + 5  # Pa             3.28e4
-S : 7.17e - 2  # N / m          7.28e-2
-rho : 9.963e + 2  # kg / (m ^ 3)   9.98e2
-abs_tol : 1.0e - 10
-resl_tol : 1.0e - 10
+u: 8.63e-4 # u = 8.63e-4  # Pa * s # Dynamic Viscosity
+R0: 100.0e-6  # m                50.00e-6
+pv: 3.538e+3  # Pa             2.34e3
+exponent: 1.4
+p0: 0.8e+5  # Pa             3.28e4
+S: 7.17e-2  # N / m          7.28e-2
+rho: 9.963e+2  # kg / (m ^ 3)   9.98e2
+abs_tol: 1.0e-10
+resl_tol: 1.0e-10
 #--------------------
-P_min : 0.6
-P_max : 1.0
-R_min : 1.6
-R_max : 2.0
-R_test : 1.8
-Rdot_min : -0.1
-Rdot_max : 0.1
-Rdot_test : 0.0
+freq_min: 0.2  # Hz = "cycles" / time_unit
+freq_max: 0.5  # Hz = "cycles" / time_unit
+amp_min: 0.2
+amp_max: 0.8
+R_init: 1.4
+Rdot_init: 0.0
 #-------------------
-n_train : 512    # training samples
-n_val : 128      # validation samples
-n_test : 128     # testing samples
-batch_size : 128 # training batches
-width : 256      # number of weights in a layer
-num_layers : 3   # layers
-num_inputs : 3   # ResNet inputs
+n_train: 1024    # training samples
+n_val: 256      # validation samples
+n_test: 256     # testing samples
+batch_size: 128 # training batches
+n_layers: 3   # layers
+width: 256      # number of weights in a layer
+n_inputs: 3   # ResNet inputs
+n_outputs: 2
+#-------------------
+plot_x_dim: 30
+plot_y_dim: 10
+title_fontsize: 40
+legend_fontsize: 30
+x_label_fontsize: 30
+y_label_fontsize: 30
+axis_fontsize: 30
+box_fontsize: 30

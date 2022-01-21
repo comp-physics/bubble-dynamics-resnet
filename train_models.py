@@ -24,11 +24,11 @@ for key in D:
     globals()[str(key)] = D[key]
     # transforms key-names from dictionary into global variables, then assigns them the dictionary-values
 #---------------------------------------
-print("ResNet Architecture: {0:}-in | {1:}x{2:} | {3:}-out".format(num_inputs, num_layers, width, num_inputs))
-arch = [num_inputs]
-for j in range(num_layers):
+print("ResNet Architecture: {0:}-in + {1:}x{2:} + {3:}-out".format(n_inputs, n_layers, width, n_inputs))
+arch = [n_inputs]
+for j in range(n_layers):
     arch.append(width)
-arch.append(num_inputs)
+arch.append(n_inputs)
 #---------------------------------------
 lr = 1e-3                     # learning rate
 max_epoch = 100000            # the maximum training epoch
@@ -36,9 +36,9 @@ max_epoch = 100000            # the maximum training epoch
 # Directories and Paths
 #=========================================================
 n_steps = np.int64(model_steps * 2**k_max)
-data_folder = 'data_dt={}_steps={}_P={}-{}_R={}-{}_train.val.test={}.{}.{}'.format(dt, n_steps, P_min, P_max, R_min, R_max, n_train, n_val, n_test)
+data_folder = 'data_dt={}_steps={}_freq={}-{}_amp={}-{}_train-val-test={}-{}-{}'.format(dt, n_steps, freq_min, freq_max, amp_min, amp_max, n_train, n_val, n_test)
 data_dir = os.path.join(os.getcwd(), 'data', data_folder)
-model_folder = 'models_dt={}_steps={}_P={}-{}_R={}-{}_resnet={}.{}x{}.{}'.format(dt, n_steps, P_min, P_max, R_min, R_max, num_inputs, num_layers, width, num_inputs)
+model_folder = 'models_dt={}_steps={}_freq={}-{}_amp={}-{}_resnet={}+{}x{}+{}'.format(dt, n_steps, freq_min, freq_max, amp_min, amp_max, n_inputs, n_layers, width, n_inputs)
 model_dir = os.path.join(os.getcwd(), 'models', model_folder)
 if not os.path.exists(data_dir):
     sys.exit("Cannot find folder ../data/{} in current directory".format(data_folder))
@@ -64,7 +64,6 @@ for k in range(0,k_max+1):
     n_val = val_data.shape[0]
     n_test = test_data.shape[0]
     n_steps = test_data.shape[1] - 1
-    print('number training samples = {}'.format(n_train))
     #=========================================================
     # Train Models, each with step_size = 2^k
     #=========================================================
@@ -77,7 +76,6 @@ for k in range(0,k_max+1):
     # create/load model object
     try:
         device = 'cuda' if torch.cuda.is_available() else 'cpu'
-        print(device)
         model = torch.load(os.path.join(model_dir, model_name), map_location=device)
         model.device = device
     except:
@@ -85,7 +83,7 @@ for k in range(0,k_max+1):
         model = net.ResNet(arch=arch, dt=dt, step_size=step_size)
 
     # training
+    print('training samples: {}'.format(n_train))
+    print('device: {}'.format(device))
     model.train_net(dataset, max_epoch=max_epoch, batch_size=batch_size, lr=lr,
                 model_path=os.path.join(model_dir, model_name))
-
-import plot_models
