@@ -6,6 +6,7 @@
 
 import os
 import sys
+import pdb
 import time
 import torch
 import numpy as np
@@ -29,16 +30,18 @@ with open("parameters.yml", 'r') as stream:
 
 for key in D:
     globals()[str(key)] = D[key]
+    print('{}: {}'.format(str(key), D[key]))
     # transforms key-names from dictionary into global variables, then assigns them the dictionary-values
 
-
+print('PRESS [c] TO CONTINUE. PRESS [q] TO QUIT.')
+pdb.set_trace()
 #=========================================================
 # Directories and Paths
 #=========================================================
 n_steps = np.int64(model_steps * 2**k_max)
-data_folder = 'data_dt={}_steps={}_P={}-{}_R={}-{}_train.val.test={}.{}.{}'.format(dt, n_steps, P_min, P_max, R_min, R_max, n_train, n_val, n_test)
+data_folder = 'data_dt={}_steps={}_freq={}-{}_amp={}-{}_train+val+test={}+{}+{}'.format(dt, n_steps, freq_min, freq_max, amp_min, amp_max, n_train, n_val, n_test)
 data_dir = os.path.join(os.getcwd(), 'data', data_folder)
-model_folder = 'models_dt={}_steps={}_P={}-{}_R={}-{}_resnet={}.{}x{}.{}'.format(dt, n_steps, P_min, P_max, R_min, R_max, num_inputs, num_layers, width, num_inputs)
+model_folder = 'models_dt={}_steps={}_freq={}-{}_amp={}-{}_resnet={}+{}x{}+{}'.format(dt, n_steps, freq_min, freq_max, amp_min, amp_max, n_inputs, n_layers, width, n_inputs)
 model_dir = os.path.join(os.getcwd(), 'models', model_folder)
 if not os.path.exists(data_dir):
     sys.exit("Cannot find folder ../data/{} in current directory".format(data_folder))
@@ -93,7 +96,7 @@ criterion = torch.nn.MSELoss(reduction='none')
 #date_time = now.strftime("%Y_%m_%d_%H_%M_%S")
 
 # create directory for figures
-#figs_folder = 'figures_dt={}_steps={}_P={}-{}_R0={}_inputs={}_resnet={}x{}.pt'.format(dt, n_steps, P_min, P_max, R_test, num_inputs, num_layers, width)
+#figs_folder = 'figures_dt={}_steps={}_P={}-{}_R0={}_inputs={}_resnet={}x{}.pt'.format(dt, n_steps, freq_min, freq_max, R_test, num_inputs, num_layers, width)
 figure_dir = model_dir
 if not os.path.exists(figure_dir):
     os.makedirs(figure_dir)
@@ -116,13 +119,13 @@ fig, axs = plt.subplots(num_models, 1, figsize=(plot_x_dim, plot_y_dim*num_model
 for model in models:
     rgb = next(colors)
     k = next(iterate_k)
-    y_preds = model.uni_scale_forecast(torch.tensor(test_data[idx:idx+1, 0, :]).float(), n_steps=n_steps)
+    y_preds = model.uni_scale_forecast( torch.tensor(test_data[idx:idx+1, 0, :n_outputs]).float(), n_steps=n_steps, y_known=torch.tensor(test_data[idx:idx+1, :, n_outputs:]).float() )
     R = y_preds[0, 0:n_steps, 1].detach().numpy()
     axs[k].plot(t, test_data[idx, 0:n_steps, 1], linestyle='-', color='gray', linewidth=10, label='R(t)')
     axs[k].plot(t, R, linestyle='--', color=rgb, linewidth=6, label='$\Delta t = ${}dt'.format(step_sizes[k]) )
     axs[k].legend(fontsize=legend_fontsize, loc='upper center', ncol=5, bbox_to_anchor=(0.5, 1.17))
     axs[k].tick_params(axis='both', which='major', labelsize=axis_fontsize)
-    axs[k].grid( axis='y' )
+    axs[k].grid(axis='y')
 plt.show()
 plt.savefig(file_fig_uniscale)
 
@@ -134,7 +137,7 @@ preds_mse = list()
 times = list()
 for model in models:
     start = time.time()
-    y_preds = model.uni_scale_forecast(torch.tensor(test_data[:, 0, :]).float(), n_steps=n_steps)
+    y_preds = model.uni_scale_forecast( torch.tensor(test_data[:, 0, :n_outputs]).float(), n_steps=n_steps, y_known=torch.tensor(test_data[:, :, n_outputs:]).float() )
     end = time.time()
     times.append(end - start)
     preds_mse.append(criterion(torch.tensor(test_data[:, 1:, :]).float(), y_preds).mean(-1))
@@ -183,12 +186,12 @@ plt.savefig(file_fig_mse_models)
 start_idx = 0
 end_idx = k_max   # or len(models)-1
 best_mse = 1e+5
+val_data = np.load(os.path.join(data_dir, 'val_D{}.npy'.format(k_max)))
 # choose the largest time step
 for k in range(0, k_max+1):
     step_size = np.int64(2**k)
-    val_data = np.load(os.path.join(data_dir, 'val_D{}.npy'.format(step_size)))
-    y_preds = net.vectorized_multi_scale_forecast(torch.tensor(val_data[:, 0, :]).float().to('cpu'), n_steps=n_steps, models=models[:len(models)-k])
-    mse = criterion(torch.tensor(val_data[:, 1:, :]).float(), y_preds).mean().item()
+    y_preds = net.vectorized_multi_scale_forecast(torch.tensor(val_data[:, 0, :n_outputs]).float().to('cpu'), n_steps=n_steps, models=models[:len(models)-k], y_known=torch.tensor(val_data[:, 0, n_outputs:]).float().to('cpu'))
+    mse = criterion(torch.tensor(val_data[:, 1:, :n_outputs]).float(), y_preds).mean().item()
     if mse <= best_mse:
         end_idx = len(models)-k
         best_mse = mse
@@ -196,9 +199,8 @@ for k in range(0, k_max+1):
         # choose the smallest time step
 for k in range(0, end_idx):
     step_size = np.int64(2**k)
-    val_data = np.load(os.path.join(data_dir, 'val_D{}.npy'.format(step_size)))
-    y_preds = net.vectorized_multi_scale_forecast(torch.tensor(val_data[:, 0, :]).float().to('cpu'), n_steps=n_steps, models=models[k:end_idx])
-    mse = criterion(torch.tensor(val_data[:, 1:, :]).float(), y_preds).mean().item()
+    y_preds = net.vectorized_multi_scale_forecast(torch.tensor(val_data[:, 0, :n_outputs]).float().to('cpu'), n_steps=n_steps, models=models[k:end_idx], y_known=torch.tensor(val_data[:, :, n_outputs:]).float().to('cpu'))
+    mse = criterion(torch.tensor(val_data[:, 1:, :n_outputs]).float(), y_preds).mean().item()
     if mse <= best_mse:
         start_idx = k
         best_mse = mse
@@ -217,7 +219,7 @@ del val_data
 #==========================================================
 # multiscale time-stepping with NN
 start = time.time()
-y_preds, model_key = net.vectorized_multi_scale_forecast(torch.tensor(test_data[:, 0, :]).float(), n_steps=n_steps, models=models, key=True)
+y_preds, model_key = net.vectorized_multi_scale_forecast(torch.tensor(test_data[:, 0, :n_outputs]).float().to('cpu'), n_steps=n_steps, models=models, y_known=torch.tensor(test_data[:, :, n_outputs:]).float().to('cpu'), key=True)
 end = time.time()
 multiscale_time = end - start
 multiscale_preds_mse = criterion(torch.tensor(test_data[:, 1:, :]).float(), y_preds).mean(-1)
