@@ -14,14 +14,17 @@ class DataSet:
         :param step_size: an integer indicating the step sizes
         :param n_forward: number of steps forward
         """
-        n_train, train_steps, n_dim = train_data.shape
+        n_train, train_steps, n_inputs = train_data.shape
         n_val, val_steps, _ = val_data.shape
         n_test, test_steps, _ = test_data.shape
-        assert step_size*n_forward+1 <= train_steps and step_size*n_forward+1 <= val_steps
+        #(Scott Sims) replaced redundant calculations with 'num_steps'
+        num_steps = step_size*n_forward + 1
+        assert num_steps <= train_steps and num_steps <= val_steps
 
         # params
         self.dt = dt
-        self.n_dim = n_dim
+        self.n_inputs = n_inputs #(Scott Sims) updated n_dim to n_inputs
+        #self.n_outputs = n_outputs #(Scott Sims) update may not be needed
         self.step_size = step_size
         self.n_forward = n_forward
         self.n_train = n_train
@@ -34,7 +37,7 @@ class DataSet:
         # data
         x_idx = 0
         y_start_idx = x_idx + step_size
-        y_end_idx = x_idx + step_size*n_forward + 1
+        y_end_idx = x_idx + num_steps
         self.train_x = torch.tensor(train_data[:, x_idx, :]).float().to(self.device)
         self.train_ys = torch.tensor(train_data[:, y_start_idx:y_end_idx:step_size, :]).float().to(self.device)
         self.val_x = torch.tensor(val_data[:, x_idx, :]).float().to(self.device)
