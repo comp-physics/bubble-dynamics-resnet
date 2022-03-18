@@ -125,7 +125,7 @@ class ResNet(torch.nn.Module):
         y_preds = torch.tensor(cs(sample_steps)).transpose(1, 2).float()
         return y_preds
 
-    def train_net(self, dataset, max_epoch, batch_size, w=1.0, lr=1e-3, model_path=None, record=False, record_period=100):
+    def train_net(self, dataset, max_epoch, batch_size, w=1.0, lr_max=1e-3, lr_min=1e-4, model_path=None, min_loss=1e-8, record=False, record_period=100):
         """
         :param dataset: a dataset object
         :param max_epoch: maximum number of epochs
@@ -149,47 +149,65 @@ class ResNet(torch.nn.Module):
         self.check_data_info(dataset)
 
         # training
-        optimizer = torch.optim.Adam(self.parameters(), lr=lr)
-        epoch = 0
+        lr_exp_max = np.round(np.log10(lr_min, decimals=1) # expected to be negative
+        lr_exp_min = np.round(np.log10(lr_max, decimals=1) # expoected to be negative
+        num_exp = np.int(1+np.round(np.abs(lr_exp_max - lr_exp_min))) # number of different learning rates
         best_loss = 1e+5
-        while epoch < max_epoch:
-            epoch += 1
-            # ================= prepare data ==================
-            n_samples = dataset.n_train
-            new_idxs = torch.randperm(n_samples)
-            batch_x = dataset.train_x[new_idxs[:batch_size], :]
-            batch_ys = dataset.train_ys[new_idxs[:batch_size], :, :]
-            # =============== calculate losses ================
-            train_loss = self.calculate_loss(batch_x, batch_ys, w=w)
-            val_loss = self.calculate_loss(dataset.val_x, dataset.val_ys, w=w)
-            # ================ early stopping =================
-            if best_loss <= 1e-8:
-                print('--> model has reached an accuracy of 1e-8! Finished training!')
-                break
-            # =================== backward ====================
-            optimizer.zero_grad()
-            train_loss.backward()
-            optimizer.step()
-            # =================== log =========================        
-            if epoch % 1000 == 0:
-                print('epoch {}, training loss {}, validation loss {}'.format(epoch, train_loss.item(), val_loss.item()))
-                if val_loss.item() < best_loss:
-                    best_loss = val_loss.item()
-                    if model_path is not None:
-                        print('(--> new model saved @ epoch {})'.format(epoch))
-                        torch.save(self, model_path)
-            # =================== record ======================
-            # (Scott Sims)
-            if (record == True) and (epoch % record_period == 0):
-                n_record += 1
-                record_loss[n_record, :] = np.array( [epoch, val_loss.item() , train_loss.item()] )
-            #--------------------------------------------------
-            
-        # if to save at the end
-        if val_loss.item() < best_loss and model_path is not None:
-            print('--> new model saved @ epoch {}'.format(epoch))
-            torch.save(self, model_path)
-        
+        count_no_gain = 0
+        for j in range(num_exp):
+        # ========== initialize learning rate ================    
+            lr = 10.0**(lr_exp_max-j)
+            print("=========================")
+            print(f"learning rate = {lr}")
+            print("=========================")
+            optimizer = torch.optim.Adam(self.parameters(), lr=lr)
+            epoch = 0
+            while epoch < max_epoch:
+                epoch += 1
+                # ================= prepare data ==================
+                n_samples = dataset.n_train
+                new_idxs = torch.randperm(n_samples)
+                batch_x = dataset.train_x[new_idxs[:batch_size], :]
+                batch_ys = dataset.train_ys[new_idxs[:batch_size], :, :]
+                # =============== calculate losses ================
+                train_loss = self.calculate_loss(batch_x, batch_ys, w=w)
+                val_loss = self.calculate_loss(dataset.val_x, dataset.val_ys, w=w)
+                # ================ early stopping =================
+                if best_loss <= min_loss:
+                    print('--> model has reached an accuracy of 1e-8! Finished training!')
+                    break
+                # =================== backward ====================
+                optimizer.zero_grad()
+                train_loss.backward()
+                optimizer.step()
+                # =================== log =========================        
+                if epoch % 1000 == 0:
+                    print('epoch {}, training loss {}, validation loss {}'.format(epoch, train_loss.item(), val_loss.item()))
+                    if val_loss.item() < best_loss:
+                        best_loss = val_loss.item()
+                        count_no_gain = 0
+                        if model_path is not None:
+                            print('(--> new model saved @ epoch {})'.format(epoch))
+                            torch.save(self, model_path)
+                    else:
+                        count_no_gain += 1 # counts how many thousand epochs with no improvement in loss
+                    #-------------------------------
+                    if count_no_gain >= int(np.round(0.5*max_epoch/1000) # this number will be in thousands of epochs
+                        print('No improvement for many epochs. Trying next learning rate') 
+                        break
+                    
+                # =================== record ======================
+                # (Scott Sims)
+                if (record == True) and (epoch % record_period == 0):
+                    n_record += 1
+                    record_loss[n_record, :] = np.array( [epoch, val_loss.item() , train_loss.item()] )
+                #--------------------------------------------------
+                    # if to save at the end
+             # ====================== end while loop ====================
+             if val_loss.item() < best_loss and model_path is not None:
+                 print('--> new model saved @ epoch {}'.format(epoch))
+                 torch.save(self, model_path)
+
         #------------------------------------------------------
         # (Scott Sims)
         if (record == True):
