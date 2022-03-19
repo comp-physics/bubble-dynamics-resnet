@@ -1,6 +1,6 @@
 # # Multiscale HiTS Visuals (updated visuals)
 
-# ## updated by Scott Sims 11/23/2021
+# ## updated by Scott Sims 03/18/2022
 # ## created by Yuying Liu, 05/07/2020
 #=========================================================
 # IMPORT PACKAGES
@@ -36,10 +36,10 @@ for key in D:
 # Directories and Paths
 #=========================================================
 n_steps = np.int64(model_steps * 2**k_max)
-print(f"number of time steps = {n_steps}")
-data_folder = 'data_dt={}_steps={}_period={}-{}_amp={}-{}_train+val+test={}+{}+{}'.format(dt, n_steps, period_min, period_max, amp_min, amp_max, n_train, n_val, n_test)
+print(f"number of time-steps = {n_steps}")
+data_folder = f"data_dt={dt}_steps={n_steps}_period={period_min}-{period_max}_amp={amp_min}-{amp_max}_train+val+test={n_train}+{n_val}+{n_test}"
 data_dir = os.path.join(os.getcwd(), 'data', data_folder)
-model_folder = f"models_dt={dt}_steps={n_steps}_period={period_min}-{period_max}_amp={amp_min}-{amp_max}_lr={learn_rate_min}-{learn_rate_max}_resnet={n_inputs}+{n_layers}x{n_neurons}+{n_outputs}"
+model_folder = f"models_dt={dt}_steps={n_steps}_period={period_min}-{period_max}_amp={amp_min}-{amp_max}_lr={learn_rate}_resnet={n_inputs}+{n_layers}x{n_neurons}+{n_outputs}"
 model_dir = os.path.join(os.getcwd(), 'models', model_folder)
 if not os.path.exists(data_dir):
     sys.exit("Cannot find folder ../data/{} in current directory".format(data_folder))
@@ -47,10 +47,10 @@ if not os.path.exists(model_dir):
     sys.exit("Cannot find folder ../models/{} in current directory".format(model_folder))
 #--------------------------------------------------
 # file names for figures
-file_fig_uniscale = 'plot_uniscale_{}.png'.format(system)
-file_fig_mse_models = 'plot_MSE_models_{}.png'.format(system)
-file_fig_mse_multiscale = 'plot_MSE_multiscale_{}.png'.format(system)
-file_fig_multiscale = 'plot_multiscale_{}.png'.format(system)
+file_fig_uniscale = f"plot_uniscale_{system}.png"
+file_fig_mse_models = f"plot_MSE_models_{system}.png"
+file_fig_mse_multiscale = f"plot_MSE_multiscale_{system}.png"
+file_fig_multiscale = f"plot_multiscale_{system}.png"
 
 #========================================================================
 # Load Data and Models (then prepare some globals)
@@ -108,7 +108,7 @@ fig, axs = plt.subplots(num_models, 1, figsize=(plot_x_dim, plot_y_dim*num_model
 for model in models:
     rgb = next(colors)
     k = next(iterate_k)
-    y_preds = model.uni_scale_forecast( torch.tensor(test_data[idx:idx+1, 0, :n_outputs]).float(), n_steps=n_steps, y_known=torch.tensor(test_data[idx:idx+1, :, n_outputs:]).float() )
+    y_preds = model.uni_scale_forecast( torch.tensor(test_data[idx, 0, :n_outputs]).float(), n_steps=n_steps, y_known=torch.tensor(test_data[idx:idx+1, :, n_outputs:]).float() )
     R = y_preds[0, 0:n_steps, 1].detach().numpy()
     axs[k].plot(t_space, test_data[idx, 0:n_steps, 1], linestyle='-', color='gray', linewidth=10, label='R(t)')
     axs[k].plot(t_space, R, linestyle='--', color=rgb, linewidth=6, label='$\Delta t = ${}dt'.format(step_sizes[k]) )

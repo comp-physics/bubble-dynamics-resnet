@@ -28,26 +28,27 @@ for key in D:
 #=========================================================
 arch = [n_inputs]
 for j in range(n_layers):
-    arch.append(width)
+    arch.append(n_neurons)
 arch.append(n_outputs)
 print("ResNet Architecture: {}".format(arch))
 #print('PRESS [c] TO CONTINUE. PRESS [q] TO QUIT.')
 #pdb.set_trace()
 #---------------------------------------           
-max_epoch = 100000     # the maximum training epoch for each leaning rate
+max_epoch = 100000     # the maximum training epoch for each batch size
 #=========================================================
 # Directories and Paths
 #=========================================================
-n_steps = np.int64(model_steps * 2**k_max)
-data_folder = 'data_dt={}_steps={}_period={}-{}_amp={}-{}_train+val+test={}+{}+{}'.format(dt, n_steps, period_min, period_max, amp_min, amp_max, n_train, n_val, n_test)
+n_steps = np.ceil(period_max / (dt * model_steps * 2**k_max)) *  model_steps * 2**k_max
+n_steps = np.int64(n_steps)
+data_folder = f"data_dt={dt}_steps={n_steps}_period={period_min}-{period_max}_amp={amp_min}-{amp_max}_train+val+test={n_train}+{n_val}+{n_test}"
 data_dir = os.path.join(os.getcwd(), 'data', data_folder)
-model_folder = f"models_dt={dt}_steps={n_steps}_period={period_min}-{period_max}_amp={amp_min}-{amp_max}_lr={learn_rate_min}-{learn_rate_max}_resnet={n_inputs}+{n_layers}x{n_neurons}+{n_outputs}"
+model_folder = f"models_dt={dt}_steps={n_steps}_period={period_min}-{period_max}_amp={amp_min}-{amp_max}_lr={learn_rate}_resnet={n_inputs}+{n_layers}x{n_neurons}+{n_outputs}"
 model_dir = os.path.join(os.getcwd(), 'models', model_folder)
 if not os.path.exists(data_dir):
     sys.exit("Cannot find folder ../data/{} in current directory".format(data_folder))
 if not os.path.exists(model_dir):
     os.makedirs(model_dir)
-
+#----------------------------------------------------------
 parameter_source = os.path.abspath(os.path.join(os.getcwd(), "parameters.yml"))
 parameter_dest = os.path.abspath(os.path.join(model_dir, "parameters.yml"))
 copyfile(parameter_source, parameter_dest)
@@ -67,6 +68,7 @@ for k in range(0,k_max+1):
         n_val = val_data.shape[0]
         n_test = test_data.shape[0]
         n_steps = test_data.shape[1] - 1
+        batch_size = 2**( ceil(np.log2(n_val*batch_fraction))  )
         #=========================================================
         # Train Models, each with step_size = 2^k
         #=========================================================
@@ -85,5 +87,5 @@ for k in range(0,k_max+1):
         # training
         print('training samples: {}'.format(n_train))
         print('device: {}'.format(device))
-        model.train_net(dataset, max_epoch=max_epoch, batch_size=batch_size, lr_max=learn_rate_max, lr_min=learn_rate_min,
+        model.train_net(dataset, max_epoch=max_epoch, batch_size=batch_size, lr_min=learn_rate_min, lr_max=learn_rate_max, 
                         model_path=os.path.join(model_dir, model_name))

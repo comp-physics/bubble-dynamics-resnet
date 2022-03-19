@@ -103,7 +103,7 @@ class ResNet(torch.nn.Module):
         else:
             x_prev = torch.column_stack((x_init, y_known[:, 0, :]))
         #---------------------------------------------------------
-        cur_step = self.step_size - 1      # k := NN step_size multiplier dT = k * dt
+        cur_step = self.step_size - 1      # time-step = 2^k * dt
         while cur_step < n_steps + self.step_size:
             if y_known is None:  # (Scott Sims) adapted for when n_inputs > n_outputs
                 x_next = self.forward(x_prev)  # x(i) = x(i-1) + f( x(i-1) )
