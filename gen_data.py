@@ -1,4 +1,4 @@
-# Created by Scott Sims 03/18/2022
+# ## updated by Scott Sims 03/18/2022
 # Rayleigh-Plesset Data Generation for Multiscale Hierarchical Time-Steppers with Residual Neural Networks
 
 import os
@@ -35,8 +35,12 @@ def calculate_constants():
     Ca = (P0 - Pv) / P0
     freq_natural = np.sqrt( 3 * exponent * Ca + 2 * (3 * exponent - 1) / S_hat )
     T_natural = 1/freq_natural
-    print(f"freq_natural = {freq_natural} time-units^[-1]")
-    print(f"T_natural = {T_natural} time-units")
+    print(f"time-constant = {time_constant} sec")
+    print(f"Re = {np.round(Re, decimals=3)}")
+    print(f"S_hat = {np.round(S_hat, decimals=3)}")
+    print(f"Ca = {np.round(Ca, decimals=3)}")
+    print(f"freq_natural = {np.round(freq_natural, decimals=3)} time-units^[-1]")
+    print(f"T_natural = {np.round(T_natural, decimals=3)} time-units")
     return T_natural, Ca, Re, S_hat, v
 #--------------------------------------------------------
 def chop_to_one_digit(x):
@@ -44,10 +48,10 @@ def chop_to_one_digit(x):
 #=========================================================
 # Function: Calculates number of steps for total duration 
 #=========================================================
-def calculate_steps(n_periods=1):
-    global period_max, dt, model_steps, k_max
-    m_steps = model_steps * 2**k_max
-    return np.int64( m_steps * np.ceil( n_periods * period_max / (dt * m_steps)) )
+def calculate_steps():
+    global n_periods, period_max, dt, model_steps, k_max
+    max_steps = model_steps * 2**k_max # max slice size
+    return np.int64( max_steps * np.ceil( n_periods * period_max / (dt * max_steps)) )
 #=========================================================
 # Function: ODE - Rayleigh-Plesset
 #=========================================================
@@ -69,20 +73,20 @@ def ode_rp(t, y_init, sound):
     return y
 
 #=========================================================
-# Constants
+# Calculate Constants
 #=========================================================
 global T_natural, Ca, Re, S_hat, v
 T_natural, Ca, Re, S_hat, v = calculate_constants()
 freq_range = [1/period_max, 1/period_min]
 amp_range = [amp_min, amp_max]
-n_steps = calculate_steps(n_periods)
+n_steps = calculate_steps()
 #---------------------------------------------------
 print(f"n_steps = {n_steps}")
 t_final = dt * n_steps
 print(f"t_final = {t_final}")
 t_space = np.arange(0,n_steps+1,dt)
 #---------------------------------------------------
-# CHECK POINT
+# PAUSE script
 #---------------------------------------------------
 print('TO QUIT, PRESS [q] THEN [ENTER]')
 print('OTHERWISE, PRESS [c] THEN [ENTER]')
@@ -90,11 +94,11 @@ pdb.set_trace()
 #=========================================================
 # Directories and Paths
 #=========================================================
-data_folder = f"data_dt={dt}_steps={n_steps}_period={period_min}-{period_max}_amp={amp_min}-{amp_max}_train+val+test={n_train}+{n_val}+{n_test}"
+data_folder = f"data_dt={dt}_n-steps={n_steps}_m-steps={model_steps}_k-max={k_max}_period={period_min}-{period_max}_amp={amp_min}-{amp_max}_n-waves={n_waves}_train+val+test={n_train}+{n_val}+{n_test}"
 data_dir = os.path.join(os.getcwd(), 'data', data_folder)
 if not os.path.exists(data_dir):
     os.makedirs(data_dir)
-
+#--------------------------------
 param_source = os.path.abspath(os.path.join(os.getcwd(), "parameters.yml"))
 param_dest = os.path.abspath(os.path.join(data_dir, "parameters.yml"))
 copyfile(param_source, param_dest)
@@ -116,14 +120,14 @@ for idx in range(n_train):
     #----------------------------------
     for j in range(n_steps + 1):
         t = dt * j
-        P[j] = sound.pressure(t)  # in the paper, (p(t) - P0) / P0
+        P[j] = sound.pressure(t)  # in the paper, eps(t) = (p(t) - P0) / P0
         Pdot[j] = sound.pressure_dot(t)
     # ----------------------------------
     sol = solve_ivp(ode_rp, t_span=[0, t_final], y0=y_init, args=(sound,), t_eval=t_space, method='LSODA', rtol=rel_tol, atol=abs_tol)
     train_data[idx, :, :n_outputs] = sol.y.T
     train_data[idx, :, n_outputs:] = np.column_stack((P.reshape(n_steps+1,1), Pdot.reshape(n_steps+1,1)))
 # save training samples to file
-np.save(os.path.join(data_dir, 'train_D{}.npy'.format(2**k_max)), train_data)
+np.save(os.path.join(data_dir, f"train.npy"), train_data)
 # slice each training sample into smaller samples for each time-stepper
 for k in range(0, k_max):
     step_size = np.int64(2**k)
@@ -135,10 +139,10 @@ for k in range(0, k_max):
     for j in range(1, num_slices+1):
         idx_start = (j-1) * slice_size
         idx_end = j * slice_size
-        idx_slices = np.array(list(range(j-1, N-num_slices+j, num_slices)))
+        idx_slices = np.array(list(range(j-1, j+N-num_slices, num_slices)))
         slice_data[idx_slices, :, :] = train_data[:, idx_start:idx_end+1, :]
     # save training slices to file
-    np.save(os.path.join(data_dir, 'train_D{}.npy'.format(step_size)), slice_data)
+    np.save(os.path.join(data_dir, f"train_D{step_size}.npy"), slice_data)
 #--------------------------------------------------------
 # simulate validation trials
 #--------------------------------------------------------
@@ -150,14 +154,14 @@ for idx in range(n_val):
     # ----------------------------------
     for j in range(n_steps + 1):
         t = dt * j
-        P[j] = sound.pressure(t)  # in the paper, (p(t) - P0) / P0
+        P[j] = sound.pressure(t)  # in the paper, = (p(t) - P0) / P0
         Pdot[j] = sound.pressure_dot(t)
     # ----------------------------------
     sol = solve_ivp(ode_rp, t_span=[0, t_final], y0=y_init, args=(sound,), t_eval=t_space, method='LSODA', rtol=rel_tol, atol=abs_tol)
     val_data[idx, :, :n_outputs] = sol.y.T
     val_data[idx, :, n_outputs:] = np.column_stack((P.reshape(n_steps+1,1), Pdot.reshape(n_steps+1,1)))
 # save validation samples to file
-np.save(os.path.join(data_dir, 'val_D{}.npy'.format(2**k_max)), val_data)
+np.save(os.path.join(data_dir, f"val.npy"), val_data)
 # slice samples for each time-stepper
 for k in range(0, k_max):
     step_size = np.int64(2**k)
@@ -169,10 +173,10 @@ for k in range(0, k_max):
     for j in range(1, num_slices+1):
         idx_start = (j-1) * slice_size
         idx_end = j * slice_size
-        idx_slices = np.array(list(range(j-1, N-num_slices+j, num_slices)))
+        idx_slices = np.array(list(range(j-1, j+N-num_slices, num_slices)))
         slice_data[idx_slices, :, :] = val_data[:, idx_start:idx_end+1, :]
     # save validation samples to file
-    np.save(os.path.join(data_dir, 'val_D{}.npy'.format(step_size)), slice_data)
+    np.save(os.path.join(data_dir, f"val_D{step_size}.npy"), slice_data)
 #--------------------------------------------------------
 # simulate test trials
 #--------------------------------------------------------
@@ -185,14 +189,14 @@ for idx in range(n_test):
     # ----------------------------------
     for j in range(n_steps + 1):
         t = dt * j
-        P[j] = sound.pressure(t)  # in the paper, (p(t) - P0) / P0
+        P[j] = sound.pressure(t)  # in the paper, = (p(t) - P0) / P0
         Pdot[j] = sound.pressure_dot(t)
     # ----------------------------------
     sol = solve_ivp(ode_rp, t_span=[0, t_final], y0=y_init, args=(sound,), t_eval=t_space, method='LSODA', rtol=rel_tol, atol=abs_tol)
     test_data[idx, :, :n_outputs] = sol.y.T
     test_data[idx, :, n_outputs:] = np.column_stack((P.reshape(n_steps+1,1), Pdot.reshape(n_steps+1,1)))
 
-np.save(os.path.join(data_dir, 'test.npy'), test_data)
+np.save(os.path.join(data_dir, f"test.npy"), test_data)
 print('==============================')
 print('data generation complete')
 print('==============================')

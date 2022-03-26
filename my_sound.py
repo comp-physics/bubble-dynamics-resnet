@@ -1,16 +1,6 @@
 
+# ## updated by Scott Sims 03/18/2022
 import numpy as np
-
-# #=========================================================
-# # Input Arguments
-# #=========================================================
-# with open("parameters.yml", 'r') as stream:
-#     D = yaml.safe_load(stream)
-#
-# for key in D:
-#     globals() [str(key)] = D[key]
-#     print('{}: {}'.format(str(key), D[key]))
-#     # transforms key-names from dictionary into global variables, then assigns those variables their respective key-values
 
 # ========================================================
 # CLASS: Sound Wave (composed of multiple pressure waves)
@@ -26,8 +16,8 @@ class SoundWave:
         self.amp_range = amp_range
         self.freq_range = freq_range
         self.waves = self.generate_waves()
-        #print("__init__(SoundWave)")
-        #print(f"amp_range = {amp_range}")
+        #print("__init__(SoundWave)") # testing
+        #print(f"amp_range = {amp_range}") # testing
 
     # ----------------------------------------------------------------
     def generate_waves(self):
@@ -37,9 +27,7 @@ class SoundWave:
         amp_samples = self.poisson_normalize(self.amp_range[0], self.amp_range[1], self.n_waves)
         amp_samples = np.sort(amp_samples) # increasing order, smallest to largest
         freq_samples = self.lognormal_interval(self.freq_range[0], self.freq_range[1], self.n_waves)
-        #freq_samples = np.sort(freq_samples)
-        #freq_samples = freq_samples[::-1]  # decreasing order, largest to smallest
-        #print(f"sum of amps before = {np.sum(amp_samples)}")
+        #print(f"sum of amps before = {np.sum(amp_samples)}") # for testing
         # -----------------------------------------
         waves_list = list()
         for j in range(self.n_waves):
@@ -75,6 +63,7 @@ class SoundWave:
         sum_neg = 0.0
         # --------------------------------
         #if np.size(self.waves) == 0:
+        #    print("no waves found. please initialize structure SoundWave")
         #    self.generate_waves(self)
         # --------------------------------
         for j in range(np.size(self.waves)):
@@ -89,7 +78,7 @@ class SoundWave:
     # --------------------------------------------------------------------
     @staticmethod
     def lognormal_normalize(A, B, N):
-        # RETURN: random sample following a log_normal distribution that sums to 'x' in the interval {A < x < B}
+        # RETURN: random sample following a log_normal distribution that sums to 'x', random in the interval {A < x < B}
         # A: minimum sum of samples
         # B: maximum sum of samples
         # ------------------------------------------
@@ -158,13 +147,14 @@ class SoundWave:
         def __init__(self, amp, freq, t0=None):
             self.amplitude = amp
             self.frequency = freq
-            if t0 == None:
+            if t0 == None: # if t0 not given, then randomly initialize within some interval {-T < t0 < 0} where T = 1/freq
                 self.time_init = (-1) * np.random.uniform(0, 1) * (1 / freq)
             else:
                 self.time_init = t0
 
         # ----------------------------------------------------------
         def get_pressure(self, t):
+            # pressure at time 't'
             duration = t - self.time_init
             assert duration >= 0
             return self.amplitude * np.sin(2 * np.pi * self.frequency * duration)
@@ -172,13 +162,10 @@ class SoundWave:
 
         # ----------------------------------------------------------
         def get_pressure_dot(self, t):
+            # time derivative of pressure at time 't'
             duration = t - self.time_init
             assert duration >= 0
             return self.amplitude * 2 * np.pi * self.frequency * np.cos(2 * np.pi * self.frequency * duration)
             #return pressure_dot
 
         # ---------------------------------------------------------
-
-# ========================================================
-# UTILITY FUNCTIONS: archived for later use
-# ========================================================

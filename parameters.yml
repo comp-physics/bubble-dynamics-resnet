@@ -1,6 +1,6 @@
 ---
 system: 'RP'
-dt: 1.0               # smallest time-step; smallest duration between 2 data points
+dt: 1.0               # 1.0 smallest time-step; smallest duration between 2 data points
 n_periods: 1          # duration > n_periods * period_max (see below)
 k_max: 1              # maximum exponent for multiplier of dt (e.g. time-step = dt * 2^k) 
 model_steps: 8        # number of prediction steps during training; also determines the slice-size to chop the data-duration
@@ -9,8 +9,8 @@ abs_tol: 1.0e-10
 rel_tol: 1.0e-10
 #--------------------
 n_waves: 8            # number of pressure waves generated
-period_min: 100       # shortest period of any pressure wave (should be 10 or greater) 
-period_max: 1000      # longest period of any pressure wave (should be 10 or greater) 
+period_min: 10       # shortest period of any pressure wave (should be 10 or greater) 
+period_max: 100      # longest period of any pressure wave (should be 10 or greater) 
 amp_min: 0.4          # largest superposition of amplitudes |Cp(t)|
 amp_max: 0.6          # largest superposition of amplitudes |Cp(t)|
 R_init: 1.0           # initial bubble radius (normalized)
@@ -19,20 +19,23 @@ Rdot_init: 0.0        # initial radial velocity
 n_train: 1024         # number of training samples (before slicing)
 n_val: 256            # number of validation samples (before slicing)
 n_test: 256           # number of testing samples (before slicing)
-batch_fraction: 0.1   # fraction of testing/validation samples
 n_layers: 3           # number of layers
 n_neurons: 512        # number of neurons per layer
 n_inputs: 4           # ResNet inputs
 n_outputs: 2          # ResNet outputs
 n_epochs: 100000      # number of training epochs per learning rate
+batch_fraction: 0.1   # fraction of testing/validation samples = batch size
+learn_rate_min: 1.0e-4
+learn_rate_max: 1.0e-3
+learn_rate: 1.0e-3
 #-------------------
-u: 8.63e-4            # (Pa*s) dynamic viscosity of liquid ; 8.63e-4
-R0: 100.0e-6          # (m) equilibrium radius of bubble ; 50.00e-6
-P0: 0.8e+5            # (Pa) ambient pressure outside bubble ; 3.28e4
-Pv: 3.538e+3          # (Pa) vapor pressure inside bubble ; 2.34e3
-exponent: 1.4         #
-S: 7.17e-2            # (N/m) surface tension ; 7.28e-2
-rho: 9.963e+2         # (kg/m^3) liquid density ; 9.98e2
+u: 1.0e-3           # (Pa*s) dynamic viscosity of liquid ; 8.63e-4
+R0: 100.0e-6        # (m) equilibrium radius of bubble ; 50.00e-6
+P0: 1.0e+5          # (Pa) ambient pressure outside bubble ; 3.28e4
+Pv: 2.3e+3          # (Pa) vapor pressure inside bubble ; 3.538e+3 2.34e3
+exponent: 1.4       #
+S: 7.17875e-2       # (N/m) surface tension ; 7.28e-2
+rho: 1.0e+3         # (kg/m^3) liquid density ; 9.98e2
 #--------------------
 plot_x_dim: 30
 plot_y_dim: 10

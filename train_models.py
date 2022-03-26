@@ -1,4 +1,4 @@
-# ## updated by Scott Sims, 02/19/2022
+# ## updated by Scott Sims, 03/19/2022
 # ## created by Yuying Liu, 04/30/2020
 
 import os
@@ -40,9 +40,9 @@ max_epoch = 100000     # the maximum training epoch for each batch size
 #=========================================================
 n_steps = np.ceil(period_max / (dt * model_steps * 2**k_max)) *  model_steps * 2**k_max
 n_steps = np.int64(n_steps)
-data_folder = f"data_dt={dt}_steps={n_steps}_period={period_min}-{period_max}_amp={amp_min}-{amp_max}_train+val+test={n_train}+{n_val}+{n_test}"
+data_folder = f"data_dt={dt}_n-steps={n_steps}_m-steps={model_steps}_k-max={k_max}_period={period_min}-{period_max}_amp={amp_min}-{amp_max}_n-waves={n_waves}_train+val+test={n_train}+{n_val}+{n_test}"
 data_dir = os.path.join(os.getcwd(), 'data', data_folder)
-model_folder = f"models_dt={dt}_steps={n_steps}_period={period_min}-{period_max}_amp={amp_min}-{amp_max}_lr={learn_rate}_resnet={n_inputs}+{n_layers}x{n_neurons}+{n_outputs}"
+model_folder = f"models_dt={dt}_steps={n_steps}_m-steps={model_steps}_k-max={k_max}_period={period_min}-{period_max}_amp={amp_min}-{amp_max}_lr={learn_rate}_resnet={n_inputs}+{n_layers}x{n_neurons}+{n_outputs}"
 model_dir = os.path.join(os.getcwd(), 'models', model_folder)
 if not os.path.exists(data_dir):
     sys.exit("Cannot find folder ../data/{} in current directory".format(data_folder))

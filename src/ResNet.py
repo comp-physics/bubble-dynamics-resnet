@@ -1,3 +1,4 @@
+# ## updated by Scott Sims 03/18/2022
 import torch
 import numpy as np
 import scipy.interpolate
@@ -125,7 +126,7 @@ class ResNet(torch.nn.Module):
         y_preds = torch.tensor(cs(sample_steps)).transpose(1, 2).float()
         return y_preds
 
-    def train_net(self, dataset, max_epoch, batch_size, w=1.0, lr_max=1e-3, lr_min=1e-4, model_path=None, min_loss=1e-8, record=False, record_period=100):
+    def train_net(self, dataset, max_epoch, batch_size, w=1.0, lr_min=1e-4, lr_max=1e-3 , model_path=None, min_loss=1e-8, record=False, record_period=100):
         """
         :param dataset: a dataset object
         :param max_epoch: maximum number of epochs
@@ -149,8 +150,8 @@ class ResNet(torch.nn.Module):
         self.check_data_info(dataset)
 
         # training
-        lr_exp_max = np.round(np.log10(lr_min, decimals=1) # expected to be negative
-        lr_exp_min = np.round(np.log10(lr_max, decimals=1) # expoected to be negative
+        lr_exp_max = np.round(np.log10(lr_min, decimals=1)) # expected to be negative
+        lr_exp_min = np.round(np.log10(lr_max, decimals=1)) # expoected to be negative
         num_exp = np.int(1+np.round(np.abs(lr_exp_max - lr_exp_min))) # number of different learning rates
         best_loss = 1e+5
         count_no_gain = 0
@@ -192,7 +193,7 @@ class ResNet(torch.nn.Module):
                     else:
                         count_no_gain += 1 # counts how many thousand epochs with no improvement in loss
                     #-------------------------------
-                    if count_no_gain >= int(np.round(0.5*max_epoch/1000) # this number will be in thousands of epochs
+                    if count_no_gain > int(np.round(0.5*max_epoch/1000)): # this number will be in thousands of epochs
                         print('No improvement for many epochs. Trying next learning rate') 
                         break
                     
@@ -204,7 +205,7 @@ class ResNet(torch.nn.Module):
                 #--------------------------------------------------
                     # if to save at the end
              # ====================== end while loop ====================
-             if val_loss.item() < best_loss and model_path is not None:
+            if val_loss.item() < best_loss and model_path is not None:
                  print('--> new model saved @ epoch {}'.format(epoch))
                  torch.save(self, model_path)
 
