@@ -2,40 +2,92 @@
 # ## updated by Scott Sims 03/18/2022
 import numpy as np
 
+
+#==========================================
+#  CLASS BUBBLE
+#==========================================
+class Bubble:
+    def __init__(self, parameters):
+        self.viscosity_dynamic = parameters['viscosity_dynamic']
+        self.R_eq = parameters['R_eq']
+        self.P_eq = parameters['P_eq']
+        self.P_vap = parameters['P_vap']
+        self.poly_index = parameters['poly_index']
+        self.surface_tension = parameters['surface_tension']
+        self.density = parameters['density']
+        self.time_constant = self.R_eq * (self.density/self.P_eq)**(1/2)
+        self.Ca = (self.P_eq - self.P_vap) / self.P_eq
+        self.S = self.P_eq * self.R_eq / self.surface_tension
+        self.viscosity_kinematic = self.viscosity_dynamic / self.density
+        #---------------------------------------------------
+        if (self.viscosity_kinematic < np.finfo(float).eps):
+            self.reynolds = np.inf
+        else:
+            self.reynolds = (self.R_eq / self.viscosity_kinematic) * (self.P_eq / self.density) ** (1/2)
+        #---------------------------------------------------
+        self.freq_natural = np.sqrt( 3*self.poly_index*self.Ca + 2*(3 * self.poly_index - 1)/self.S )
+        self.T_natural = 1 / self.freq_natural
+
+    #========================================================
+    # RAYLEIGH-PLESSET ODE (nondimensionalized)
+    #========================================================
+    def rhs_rp(self, t, y, sound):
+        # R, Rdot = y[0], y[1]
+        Cp = sound.pressure(t)
+        #---------------------------------------------------
+        # SYSTEM OF ODEs, the 1st and 2nd derivatives
+        #----------------------------------------------------
+        ydot = np.zeros(2)
+        ydot[0] = y[1]
+        ydot[1] = -(3 / 2) * (y[1] ** 2) - (4 / self.reynolds) * y[1] / y[0] - (2 / self.S) * (1 / y[0]) + (2 / self.S + self.Ca) * ( 1 / (y[0] ** (3*self.poly_index))) - (Cp + self.Ca)
+        ydot[1] = ydot[1] / y[0]
+        #---------------------------------------------------
+        return ydot
+
+#================================================================================================================
+
 # ========================================================
 # CLASS: Sound Wave (composed of multiple pressure waves)
 # ========================================================
 class SoundWave:
-    def __init__(self, amp_range, freq_range, num_waves):
+    def __init__(self, amp_range, freq_range, num_waves, time_align=None):
         assert type(num_waves) == int
         assert num_waves >= int(1)
         assert np.size(amp_range) == 2
         assert np.size(freq_range) == 2
         # -----------------------------------------
+        self.time_align = time_align
         self.n_waves = num_waves
         self.amp_range = amp_range
         self.freq_range = freq_range
         self.waves = self.generate_waves()
-        #print("__init__(SoundWave)") # testing
-        #print(f"amp_range = {amp_range}") # testing
+        # -----------------------------------------
+        # check initial pressure and correct if magnitude too large
+        # -----------------------------------------
 
     # ----------------------------------------------------------------
     def generate_waves(self):
         assert self.amp_range[1] >= self.amp_range[0]
         assert self.freq_range[1] >= self.freq_range[0]
         # -----------------------------------------
-        amp_samples = self.poisson_normalize(self.amp_range[0], self.amp_range[1], self.n_waves)
+        amp_samples = self.uniform_normalized(self.amp_range[0], self.amp_range[1], self.n_waves)
+        #amp_samples = self.lognormal_normalized(self.amp_range[0], self.amp_range[1], self.n_waves)
         amp_samples = np.sort(amp_samples) # increasing order, smallest to largest
+        amp_samples = amp_samples[::-1] # reverse order, largest to smallest
+        #freq_samples = np.random.uniform(self.freq_range[0], self.freq_range[1], self.n_waves)
         freq_samples = self.lognormal_interval(self.freq_range[0], self.freq_range[1], self.n_waves)
-        #print(f"sum of amps before = {np.sum(amp_samples)}") # for testing
+        freq_samples = np.sort(freq_samples)
+        #freq_samples = freq_samples[::-1]
         # -----------------------------------------
+        assert(len(freq_samples)==self.n_waves)
+        assert(len(amp_samples)==self.n_waves)
         waves_list = list()
         for j in range(self.n_waves):
-            waves_list.append(self.PressureWave(amp_samples[j], freq_samples[j]))
+            waves_list.append(self.PressureWave(amp_samples[j], freq_samples[j], phase=np.random.choice([0,1])*np.pi))
+        # -----------------------------------------
         return waves_list
     # ----------------------------------------------------------------
     def pressure(self, t):
-        assert t >= 0.0
         assert np.size(self.waves) > 0
         sum_pos = 0.0
         sum_neg = 0.0
@@ -57,7 +109,6 @@ class SoundWave:
     # --------------------------------------------------------------------
 
     def pressure_dot(self, t):
-        assert t >= 0.0
         assert np.size(self.waves) > 0
         sum_pos = 0.0
         sum_neg = 0.0
@@ -77,7 +128,7 @@ class SoundWave:
 
     # --------------------------------------------------------------------
     @staticmethod
-    def lognormal_normalize(A, B, N):
+    def lognormal_normalized(A, B, N):
         # RETURN: random sample following a log_normal distribution that sums to 'x', random in the interval {A < x < B}
         # A: minimum sum of samples
         # B: maximum sum of samples
@@ -102,12 +153,12 @@ class SoundWave:
         return np.ones(N) * A + r * (B - A) / max_r
         # ------------------------------------------
         # derivation of interval scaling:
-        # (1) { 0 < r < M } --> { 0 < r/M < 1 }  the random distribution
+        # (1) { 0 < r < max_r } --> { 0 < r/max_r < 1 }  the random distribution
         # (2) { A < x < B } --> { 0 < (x-A)/(B-A) < 1 }  the desired distribution
-        # (1) & (2)  x-A = r/M (B-A)
+        # (1) & (2)  x-A = r/max_r (B-A)
 
     @staticmethod
-    def poisson_normalize(A, B, N):
+    def poisson_normalized(A, B, N):
         # RETURN: random sample following a poisson distribution that sums to 'x' in the interval {A < x < B}
         # A: minimum sum of samples
         # B: maximum sum of samples
@@ -133,39 +184,59 @@ class SoundWave:
         return np.ones(N) * A + r * (B - A) / max_r
         # ------------------------------------------
         # derivation of interval scaling:
-        # (1) { 0 < r < M } --> { 0 < r/M < 1 }  the random distribution
+        # (1) { 0 < r < max_r } --> { 0 < r/max_r < 1 }  the random distribution
         # (2) { A < x < B } --> { 0 < (x-A)/(B-A) < 1 } the desired distribution
-        # (1) & (2)  x-A = r/M (B-A)
-
+        # (1) & (2)  x-A = r/max_r (B-A)
+     # --------------------------------------------------------------------
+    @staticmethod
+    def uniform_normalized(A, B, N):
+        # RETURN: random sample following a uniform distribution that sums to 'x' in the interval {A < x < B}
+        # A: minimum sum of samples
+        # B: maximum sum of samples
+        # ------------------------------------------
+        assert B >= A
+        alpha = np.random.uniform(0.1, 1, N)
+        sum_a = np.sum(alpha)
+        alpha = alpha * np.random.uniform(A,B) / sum_a
+        
+        return alpha
+        # expect_a = N/2 
+        # scale = np.max([expect_a, sum_a*5*expect_a/3])
+        # return scale * alpha
+    #--------------------------------------------------------------------
+    @staticmethod
+    def uniform_interval(A, B, N):
+        # RETURN: random sample following a uniform distribution
+        # A: minimum sum of samples
+        # B: maximum sum of samples
+        # ------------------------------------------
+        assert B >= A
+        return np.random.uniform(A, B, N)  # normalized and then scaled to desired random sum
     # ========================================================
     # SUB-CLASS: Pressure Wave
     # ========================================================
     class PressureWave:
-        __slots__ = ('amplitude','frequency','time_init')
+        __slots__ = ('amplitude','freq','phase')
 
         # ----------------------------------------------------------
-        def __init__(self, amp, freq, t0=None):
+        def __init__(self, amp, freq, phase=None):
             self.amplitude = amp
-            self.frequency = freq
-            if t0 == None: # if t0 not given, then randomly initialize within some interval {-T < t0 < 0} where T = 1/freq
-                self.time_init = (-1) * np.random.uniform(0, 1) * (1 / freq)
+            self.freq = freq
+            if phase == None: # if t0 not given, then randomly initialize within some interval {-T < t0 < 0} where T = 1/freq
+                self.phase = np.random.uniform(0, 2*np.pi)
             else:
-                self.time_init = t0
+                self.phase = phase
 
         # ----------------------------------------------------------
         def get_pressure(self, t):
             # pressure at time 't'
-            duration = t - self.time_init
-            assert duration >= 0
-            return self.amplitude * np.sin(2 * np.pi * self.frequency * duration)
+            return self.amplitude * np.sin(2 * np.pi * self.freq * t + self.phase)
             #return pressure
 
         # ----------------------------------------------------------
         def get_pressure_dot(self, t):
             # time derivative of pressure at time 't'
-            duration = t - self.time_init
-            assert duration >= 0
-            return self.amplitude * 2 * np.pi * self.frequency * np.cos(2 * np.pi * self.frequency * duration)
+            return self.amplitude * 2 * np.pi * self.freq * np.cos(2 * np.pi * self.freq * t + self.phase)
             #return pressure_dot
 
         # ---------------------------------------------------------

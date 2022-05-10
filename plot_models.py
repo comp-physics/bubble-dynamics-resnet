@@ -39,9 +39,9 @@ for key in Dic:
 #=========================================================
 n_steps = np.int64(model_steps * 2**k_max)
 print(f"number of time-steps = {n_steps}")
-data_folder = f"data_dt={dt}_n-steps={n_steps}_m-steps={model_steps}_k-max={k_max}_period={period_min}-{period_max}_amp={amp_min}-{amp_max}_n-waves={n_waves}_train+val+test={n_train}+{n_val}+{n_test}"
+data_folder = f"data_dt={dt}_n-steps={n_steps}_m-steps={model_steps}_k={k_min}-{k_max}_period={period_min}-{period_max}_amp={amp_min}-{amp_max}_n-waves={n_waves}_train+val+test={n_train}+{n_val}+{n_test}"
 data_dir = os.path.join(os.getcwd(), 'data', data_folder)
-model_folder = f"models_dt={dt}_steps={n_steps}_m-steps={model_steps}_k-max={k_max}_period={period_min}-{period_max}_amp={amp_min}-{amp_max}_lr={learn_rate}_resnet={n_inputs}+{n_layers}x{n_neurons}+{n_outputs}"
+model_folder = f"models_dt={dt}_steps={n_steps}_m-steps={model_steps}_k={k_min}-{k_max}_period={period_min}-{period_max}_amp={amp_min}-{amp_max}_lr={learn_rate_min}-{learn_rate_max}_resnet={n_inputs}+{n_layers}x{n_neurons}+{n_outputs}"
 model_dir = os.path.join(os.getcwd(), 'models', model_folder)
 if not os.path.exists(data_dir):
     sys.exit("Cannot find folder ../data/{} in current directory".format(data_folder))
