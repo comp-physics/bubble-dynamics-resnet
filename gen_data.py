@@ -105,7 +105,7 @@ y_init = [R_init, Rdot_init]
 for idx in range(n_train):
     #----------------------------------
     sound = bub.SoundWave(amp_range, freq_range, n_waves)
-    root = fsolve(sound.pressure, n_steps*dt, xtol=1e-6)
+    root = fsolve(sound.pressure, period_max, xtol=1e-6)
     t0 = root[0]
     for j in range(n_waves):
         sound.waves[j].phase = sound.waves[j].phase + (2*np.pi*sound.waves[j].freq)*t0
@@ -151,7 +151,7 @@ print('generating validation trials ...')
 for idx in range(n_val):
     #----------------------------------
     sound = bub.SoundWave(amp_range, freq_range, n_waves)
-    root = fsolve(sound.pressure, n_steps*dt, xtol=1e-6)
+    root = fsolve(sound.pressure, period_max, xtol=1e-6)
     t0 = root[0]
     for j in range(n_waves):
         sound.waves[j].phase = sound.waves[j].phase + (2*np.pi*sound.waves[j].freq)*t0
@@ -197,7 +197,7 @@ print('generating testing trials ...')
 for idx in range(n_test):
     #----------------------------------
     sound = bub.SoundWave(amp_range, freq_range, n_waves)
-    root = fsolve(sound.pressure, n_steps*dt, xtol=1e-6)
+    root = fsolve(sound.pressure, period_max, xtol=1e-6)
     t0 = root[0]
     for j in range(n_waves):
         sound.waves[j].phase = sound.waves[j].phase + (2*np.pi*sound.waves[j].freq)*t0

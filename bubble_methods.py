@@ -78,7 +78,7 @@ class SoundWave:
         amp_samples = amp_samples[::-1] # reverse order, largest to smallest
         #freq_samples = np.random.uniform(self.freq_range[0], self.freq_range[1], self.n_waves)
         freq_samples = self.uniform_interval(self.freq_range[0], self.freq_range[1], self.n_waves)
-        freq_samples = np.sort(freq_samples)
+        #freq_samples = np.sort(freq_samples)
         #freq_samples = freq_samples[::-1]
         # -----------------------------------------
         waves_list = []
@@ -196,7 +196,7 @@ class SoundWave:
         # B: maximum sum of samples
         # ------------------------------------------
         assert B >= A
-        r = np.random.uniform(0.4, 1, N)
+        r = np.random.uniform(0.3, 1, N)
         r = r * np.random.uniform(A,B) / np.sum(r)
         return r
         # expect_a = N/2 

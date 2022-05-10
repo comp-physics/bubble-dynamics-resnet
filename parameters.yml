@@ -1,25 +1,25 @@
 ---
 system: 'RP'
-dt: 0.05               # 1.0 smallest time-step; smallest duration between 2 data points
+dt: 0.02               # 1.0 smallest time-step; smallest duration between 2 data points
 n_periods: 5          # duration > n_periods * period_max (see below)
 k_min: 5
-k_max: 5              # 7; maximum exponent for multiplier of dt (e.g. time-step = dt * 2^k) 
+k_max: 6              # 7; maximum exponent for multiplier of dt (e.g. time-step = dt * 2^k) 
 model_steps: 7        # (odd preferred) number of prediction steps during training; also determines the slice-size to chop the data-duration
 #--------------------
 abs_tol: 1.0e-8
 rel_tol: 1.0e-8
 #--------------------
-n_waves: 8          # number of pressure waves generated
-period_min: 8        # shortest period of any pressure wave (should be 10 or greater) 
-period_max: 16       # longest period of any pressure wave (should be 10 or greater) 
-amp_min: 0.7          # largest superposition of amplitudes |Cp(t)|
+n_waves: 10          # number of pressure waves generated
+period_min: 6        # shortest period of any pressure wave (should be 10 or greater) 
+period_max: 20       # longest period of any pressure wave (should be 10 or greater) 
+amp_min: 0.6          # largest superposition of amplitudes |Cp(t)|
 amp_max: 0.8          # largest superposition of amplitudes |Cp(t)|
 R_init: 1.0           # initial bubble radius (normalized)
 Rdot_init: 0.0        # initial radial velocity
 #-------------------
-n_train: 2         # number of training samples (before slicing into sub-intervals)
-n_val: 2            # number of validation samples (before slicing into sub-intervals)
-n_test: 16           # number of testing samples (before slicing into sub-intervals)
+n_train: 256         # number of training samples (before slicing into sub-intervals)
+n_val: 64            # number of validation samples (before slicing into sub-intervals)
+n_test: 64           # number of testing samples (before slicing into sub-intervals)
 n_layers: 3           # number of layers
 n_neurons: 128        # number of neurons per layer
 n_inputs: 4           # ResNet inputs
