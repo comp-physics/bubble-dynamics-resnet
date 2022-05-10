@@ -1,15 +1,22 @@
 # ## updated by Scott Sims 05/10/2022
 # Rayleigh-Plesset Data Generation for Multiscale Time-Steppers with Residual Neural Networks
 
+#----------------------------------
+# universal packages
+#----------------------------------
 import os
 import pdb
 import numpy as np
-import bubble_methods as bub
 from scipy.integrate import solve_ivp
+from scipy.optimize import fsolve
 import matplotlib.pyplot as plt
 import yaml
 from shutil import copyfile
-
+import copy
+#----------------------------------
+# local packages
+#----------------------------------
+import bubble_methods as bub
 
 #=========================================================
 # Read input arguments from YAML file: paramters.yml
@@ -96,7 +103,12 @@ print('==============================')
 print('generating training trials ...')
 y_init = [R_init, Rdot_init]
 for idx in range(n_train):
-    sound = bub.SoundWave(amp_range, freq_range, n_waves) #time_samples[idx])
+    #----------------------------------
+    sound = bub.SoundWave(amp_range, freq_range, n_waves)
+    root = fsolve(sound.pressure, n_steps*dt, xtol=1e-6)
+    t0 = root[0]
+    for j in range(n_waves):
+        sound.waves[j].phase = sound.waves[j].phase + (2*np.pi*sound.waves[j].freq)*t0
     #----------------------------------
     for j in range(n_steps + 1):
         t = dt * j
@@ -137,8 +149,13 @@ val_data = np.zeros((n_val, n_steps + 1, n_inputs))
 print('==============================')
 print('generating validation trials ...')
 for idx in range(n_val):
-    sound = bub.SoundWave(amp_range, freq_range, n_waves) #, time_samples[idx])
-    # ----------------------------------
+    #----------------------------------
+    sound = bub.SoundWave(amp_range, freq_range, n_waves)
+    root = fsolve(sound.pressure, n_steps*dt, xtol=1e-6)
+    t0 = root[0]
+    for j in range(n_waves):
+        sound.waves[j].phase = sound.waves[j].phase + (2*np.pi*sound.waves[j].freq)*t0
+    #----------------------------------
     for j in range(n_steps + 1):
         t = dt * j
         P[j] = sound.pressure(t)  # in the paper, = (p(t) - P0) / P0
@@ -178,8 +195,12 @@ test_data = np.zeros((n_test, n_steps + 1, n_inputs))
 print('==============================')
 print('generating testing trials ...')
 for idx in range(n_test):
-    #print(f"| test-{i} |")
-    sound = bub.SoundWave(amp_range, freq_range, n_waves) #, time_samples[idx])
+    #----------------------------------
+    sound = bub.SoundWave(amp_range, freq_range, n_waves)
+    root = fsolve(sound.pressure, n_steps*dt, xtol=1e-6)
+    t0 = root[0]
+    for j in range(n_waves):
+        sound.waves[j].phase = sound.waves[j].phase + (2*np.pi*sound.waves[j].freq)*t0
     # ----------------------------------
     for j in range(n_steps + 1):
         t = dt * j
@@ -218,14 +239,14 @@ for j in j_samples:
     axs[0].text(0.0*t_final, max(R), parameters, fontsize=box_fontsize, verticalalignment='top', bbox=props)
     #-------------------------------------------------------------------------------
     axs[1].plot(t_space, P, color='tab:red', label='$P(t)$',  linewidth=line_width)
-    axs[1].set_xlabel('t / $t_c$',fontsize=x_label_fontsize)
-    axs[1].set_ylabel('$C_p(t)$',fontsize=y_label_fontsize)
+    axs[1].set_xlabel('t / $t_c$', fontsize=x_label_fontsize)
+    axs[1].set_ylabel('$C_p(t)$', fontsize=y_label_fontsize)
     axs[1].tick_params(axis='both', which='major', labelsize=axis_fontsize)
     # axs[1].text(0.0*t_final, max(P), parameters, fontsize=box_fontsize, verticalalignment='top', bbox=props)
     #-------------------------------------------------------------------------------
     file_fig_data = os.path.abspath(os.path.join(data_dir, f"test_data_{j}.png" ))
     fig.tight_layout(pad=2.0)
-    fig.savefig(file_fig_data, dpi=300)
+    fig.savefig(file_fig_data, dpi=200)
     plt.close(fig) # or maybe plt.clf()
 
 print("images saved")

@@ -1,6 +1,7 @@
 
 # ## updated by Scott Sims 03/18/2022
 import numpy as np
+from scipy.optimize import fsolve
 
 
 #==========================================
@@ -8,13 +9,14 @@ import numpy as np
 #==========================================
 class Bubble:
     def __init__(self, parameters):
-        self.viscosity_dynamic = parameters['viscosity_dynamic']
+
         self.R_eq = parameters['R_eq']
         self.P_eq = parameters['P_eq']
         self.P_vap = parameters['P_vap']
         self.poly_index = parameters['poly_index']
         self.surface_tension = parameters['surface_tension']
         self.density = parameters['density']
+        self.viscosity_dynamic = parameters['viscosity_dynamic']
         self.time_constant = self.R_eq * (self.density/self.P_eq)**(1/2)
         self.Ca = (self.P_eq - self.P_vap) / self.P_eq
         self.S = self.P_eq * self.R_eq / self.surface_tension
@@ -44,7 +46,7 @@ class Bubble:
         #---------------------------------------------------
         return ydot
 
-#================================================================================================================
+
 
 # ========================================================
 # CLASS: Sound Wave (composed of multiple pressure waves)
@@ -75,17 +77,16 @@ class SoundWave:
         amp_samples = np.sort(amp_samples) # increasing order, smallest to largest
         amp_samples = amp_samples[::-1] # reverse order, largest to smallest
         #freq_samples = np.random.uniform(self.freq_range[0], self.freq_range[1], self.n_waves)
-        freq_samples = self.lognormal_interval(self.freq_range[0], self.freq_range[1], self.n_waves)
+        freq_samples = self.uniform_interval(self.freq_range[0], self.freq_range[1], self.n_waves)
         freq_samples = np.sort(freq_samples)
         #freq_samples = freq_samples[::-1]
         # -----------------------------------------
-        assert(len(freq_samples)==self.n_waves)
-        assert(len(amp_samples)==self.n_waves)
-        waves_list = list()
+        waves_list = []
         for j in range(self.n_waves):
-            waves_list.append(self.PressureWave(amp_samples[j], freq_samples[j], phase=np.random.choice([0,1])*np.pi))
+            waves_list.append(self.PressureWave(amp_samples[j], freq_samples[j]))
         # -----------------------------------------
         return waves_list
+
     # ----------------------------------------------------------------
     def pressure(self, t):
         assert np.size(self.waves) > 0
@@ -195,11 +196,9 @@ class SoundWave:
         # B: maximum sum of samples
         # ------------------------------------------
         assert B >= A
-        alpha = np.random.uniform(0.1, 1, N)
-        sum_a = np.sum(alpha)
-        alpha = alpha * np.random.uniform(A,B) / sum_a
-        
-        return alpha
+        r = np.random.uniform(0.4, 1, N)
+        r = r * np.random.uniform(A,B) / np.sum(r)
+        return r
         # expect_a = N/2 
         # scale = np.max([expect_a, sum_a*5*expect_a/3])
         # return scale * alpha
