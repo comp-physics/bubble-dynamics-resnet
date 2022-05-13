@@ -1,6 +1,6 @@
 # # Multiscale HiTS Visuals (updated visuals)
 
-# ## updated by Scott Sims 03/18/2022
+# ## adapted by Scott Sims 03/18/2022
 # ## created by Yuying Liu, 05/07/2020
 #=========================================================
 # IMPORT PACKAGES
@@ -22,6 +22,8 @@ module_dir = os.path.abspath( os.path.join(os.getcwd(),'src'))
 if module_dir not in sys.path:
     sys.path.append(module_dir)
 import ResNet as net
+#--------------------------------------------------
+from bubble_methods import get_num_steps
 #=========================================================
 # Input Arguments
 #=========================================================
@@ -37,7 +39,7 @@ for key in Dic:
 #=========================================================
 # Directories and Paths
 #=========================================================
-n_steps = np.int64(model_steps * 2**k_max)
+n_steps = get_num_steps(dt, model_steps, k_max, period_min, n_periods)
 print(f"number of time-steps = {n_steps}")
 data_folder = f"data_dt={dt}_n-steps={n_steps}_m-steps={model_steps}_k={k_min}-{k_max}_period={period_min}-{period_max}_amp={amp_min}-{amp_max}_n-waves={n_waves}_train+val+test={n_train}+{n_val}+{n_test}"
 data_dir = os.path.join(os.getcwd(), 'data', data_folder)

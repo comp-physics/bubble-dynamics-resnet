@@ -8,13 +8,15 @@ import torch
 import numpy as np
 import yaml
 from shutil import copyfile
-
+#-----------------------------------------------------
 module_path = os.path.abspath(os.path.join(os.getcwd(),'src'))
 if module_path not in sys.path:
     sys.path.append(module_path)
-
+#-----------------------------------------------------
+from bubble_methods import get_num_steps
 import ResNet as net
-
+#-----------------------------------------------------
+torch.cuda.empty_cache()
 #=========================================================
 # Input Arguments
 #=========================================================
@@ -38,14 +40,15 @@ max_epoch = 100000     # the maximum training epoch for each batch size
 #=========================================================
 # Directories and Paths
 #=========================================================
-n_steps = np.ceil(period_max / (dt * model_steps * 2**k_max)) *  model_steps * 2**k_max
-n_steps = np.int64(n_steps)
+n_steps = get_num_steps(dt, model_steps, k_max, period_min, n_periods)
 data_folder = f"data_dt={dt}_n-steps={n_steps}_m-steps={model_steps}_k={k_min}-{k_max}_period={period_min}-{period_max}_amp={amp_min}-{amp_max}_n-waves={n_waves}_train+val+test={n_train}+{n_val}+{n_test}"
 data_dir = os.path.join(os.getcwd(), 'data', data_folder)
 model_folder = f"models_dt={dt}_steps={n_steps}_m-steps={model_steps}_k={k_min}-{k_max}_period={period_min}-{period_max}_amp={amp_min}-{amp_max}_lr={learn_rate_min}-{learn_rate_max}_resnet={n_inputs}+{n_layers}x{n_neurons}+{n_outputs}"
 model_dir = os.path.join(os.getcwd(), 'models', model_folder)
 if not os.path.exists(data_dir):
-    sys.exit("Cannot find folder ../data/{} in current directory".format(data_folder))
+    print("current directory:")
+    print(os.getcwd())
+    sys.exit("Cannot find folder ../data/{data_folder} in current directory".format(data_folder))
 if not os.path.exists(model_dir):
     os.makedirs(model_dir)
 #----------------------------------------------------------
@@ -56,7 +59,7 @@ copyfile(parameter_source, parameter_dest)
 #=========================================================
 # Start Training
 #=========================================================
-for k in range(0,k_max+1):
+for k in range(k_min,k_max+1):
         #=========================================================
         # Load Data, each with step_size = 2^k
         #=========================================================
@@ -65,10 +68,13 @@ for k in range(0,k_max+1):
         val_data = np.load(os.path.join(data_dir, 'val_D{}.npy'.format(step_size)))
         test_data = np.load(os.path.join(data_dir, 'test.npy'))
         n_train = train_data.shape[0]
+        print(n_train)
         n_val = val_data.shape[0]
+        print(n_val)
         n_test = test_data.shape[0]
+        print(n_test)
         n_steps = test_data.shape[1] - 1
-        batch_size = 2**( ceil(np.log2(n_val*batch_fraction))  )
+        batch_size = np.int64(np.round(n_val*batch_fraction))
         #=========================================================
         # Train Models, each with step_size = 2^k
         #=========================================================

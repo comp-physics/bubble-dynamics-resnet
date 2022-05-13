@@ -1,25 +1,25 @@
 ---
 system: 'RP'
 dt: 0.02               # 1.0 smallest time-step; smallest duration between 2 data points
-n_periods: 5          # duration > n_periods * period_max (see below)
-k_min: 5
-k_max: 6              # 7; maximum exponent for multiplier of dt (e.g. time-step = dt * 2^k) 
+n_periods: 6          # duration > n_periods * period_min (see below)
+k_min: 5              # minimum exponent for multiplier of dt (e.g. time-step = dt * 2^k) 
+k_max: 6              # maximum exponent for multiplier of dt (e.g. time-step = dt * 2^k) 
 model_steps: 7        # (odd preferred) number of prediction steps during training; also determines the slice-size to chop the data-duration
 #--------------------
 abs_tol: 1.0e-8
 rel_tol: 1.0e-8
 #--------------------
 n_waves: 10          # number of pressure waves generated
-period_min: 6        # shortest period of any pressure wave (should be 10 or greater) 
+period_min: 10        # shortest period of any pressure wave (should be 10 or greater) 
 period_max: 20       # longest period of any pressure wave (should be 10 or greater) 
-amp_min: 0.6          # largest superposition of amplitudes |Cp(t)|
-amp_max: 0.8          # largest superposition of amplitudes |Cp(t)|
+amp_min: 1.4         # largest supremum of superposition of amplitudes |Cp(t)|
+amp_max: 1.5          # smallest supremum of superposition of amplitudes |Cp(t)|
 R_init: 1.0           # initial bubble radius (normalized)
 Rdot_init: 0.0        # initial radial velocity
 #-------------------
-n_train: 256         # number of training samples (before slicing into sub-intervals)
+n_train: 128         # number of training samples (before slicing into sub-intervals)
 n_val: 64            # number of validation samples (before slicing into sub-intervals)
-n_test: 64           # number of testing samples (before slicing into sub-intervals)
+n_test: 128           # number of testing samples (before slicing into sub-intervals)
 n_layers: 3           # number of layers
 n_neurons: 128        # number of neurons per layer
 n_inputs: 4           # ResNet inputs
@@ -32,7 +32,7 @@ learn_rate: 1.0e-3
 #-------------------
 viscosity_dynamic: 0.0    # 1.0e-3           # (Pa*s) dynamic viscosity of liquid ; 8.63e-4
 R_eq: 100.0e-6        # (m) equilibrium radius of bubble a.k.a. R_eq  ; 50.0e-6
-P_eq: 1.0e+4          # 1.0e+5 ; (Pa) ambient pressure outside bubble ; 3.0e4
+P_eq: 1.0e+5          # 1.0e+5 ; (Pa) ambient pressure outside bubble ; 3.0e4
 P_vap: 2.3e+3          # (Pa) vapor pressure inside bubble ; 3.538e+3 
 poly_index: 1.4       #
 surface_tension: 7.17875e-2       # (N/m) surface tension ; 7.17875e-2

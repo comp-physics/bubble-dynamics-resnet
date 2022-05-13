@@ -1,4 +1,4 @@
-# ## updated by Scott Sims 05/10/2022
+# ## adapted by Scott Sims 05/11/2022
 # Rayleigh-Plesset Data Generation for Multiscale Time-Steppers with Residual Neural Networks
 
 #----------------------------------
@@ -12,7 +12,6 @@ from scipy.optimize import fsolve
 import matplotlib.pyplot as plt
 import yaml
 from shutil import copyfile
-import copy
 #----------------------------------
 # local packages
 #----------------------------------
@@ -27,15 +26,6 @@ for key in D:
     globals()[str(key)] = D[key]
     print('{}: {}'.format(str(key), D[key]))
     # transforms key-names from dictionary into global variables, then assigns those variables their respective key-values
-
-
-#=========================================================
-# Function: Calculates number of steps for total duration 
-#=========================================================
-def calculate_steps():
-    global n_periods, period_max, dt, model_steps, k_max
-    max_steps = model_steps * 2**k_max # max slice size
-    return np.int64( np.round( max_steps * np.ceil( n_periods * period_max / (dt * max_steps)) ) )
 #--------------------------------------------------------
 def chop_to_one_digit(x):
     return round(x, -int(np.floor(np.log10(abs(x)))) + 0)
@@ -60,7 +50,7 @@ print(f"-----------------------------------------")
 #=========================================================
 freq_range = [1/period_max, 1/period_min]
 amp_range = [amp_min, amp_max]
-n_steps = calculate_steps()
+n_steps = bub.get_num_steps(dt, model_steps, k_max, period_min, n_periods)
 #---------------------------------------------------
 print(f"n_steps = {n_steps}")
 t_final = dt * (n_steps)
@@ -91,7 +81,7 @@ copyfile(param_source, param_dest)
 #=========================================================
 # Data Generation
 #=========================================================
-np.random.seed(2)
+np.random.seed(3)
 P = np.zeros(n_steps+1)
 Pdot = np.zeros(n_steps+1)
 #--------------------------------------------------------
@@ -123,17 +113,16 @@ for idx in range(n_train):
 np.save(os.path.join(data_dir, f"train.npy"), train_data)
 # slice each training sample into smaller samples for each time-stepper
 for k in range(k_min, k_max+1):
-    step_size = np.int64(2**k)
-    slice_size = np.int64(model_steps * step_size)
-    num_slices = np.int64(n_steps/slice_size-1)
-    slide_size = np.int64(slice_size/2)
-    N = n_train * num_slices * 2
+    step_size = np.int64(np.round(2**k))
+    slice_size = np.int64(np.round(model_steps * step_size))
+    num_slices = np.int64(np.floor(n_steps/slice_size))
+    N = np.int64(n_train * num_slices * slice_size)
     slice_data = np.zeros((N, slice_size + 1, n_inputs))
-    for m in range(2):
+    for m in range(slice_size):
         #------------------------------------
-        for j in range(1, num_slices+1):
-            idx_start = (j-1)*slice_size + m*slide_size
-            idx_end = j*slice_size + m*slide_size
+        for j in range(1, num_slices):
+            idx_start = (j-1)*slice_size + m
+            idx_end = j*slice_size + m
             #idx_slices = np.array(list(range(j-1, j+N, num_slices))) # j+N-num_slices
             #idx_slices = idx_slices + m*slide_size*np.ones((2*num_slices, ), dtype=int)
             idx = m * num_slices + (j-1)
@@ -169,21 +158,20 @@ for idx in range(n_val):
 np.save(os.path.join(data_dir, f"val.npy"), val_data)
 # slice samples for each time-stepper
 for k in range(k_min, k_max+1):
-    step_size = np.int64(2**k)
-    slice_size = np.int64(model_steps * step_size)
-    num_slices = np.int64(n_steps/slice_size-1)
-    slide_size = np.int64(slice_size/2)
-    N = n_train * num_slices * 2
+    step_size = np.int64(np.round(2**k))
+    slice_size = np.int64(np.round(model_steps * step_size))
+    num_slices = np.int64(np.floor(n_steps/slice_size))
+    N = np.int64(n_val * num_slices * slice_size)
     slice_data = np.zeros((N, slice_size + 1, n_inputs))
-    #------------------------------------
-    for m in range(2):
-        for j in range(1, num_slices+1):
-            idx_start = (j-1) * slice_size + m*slide_size
-            idx_end = j * slice_size + m*slide_size
+    for m in range(slice_size):
+        #------------------------------------
+        for j in range(1, num_slices):
+            idx_start = (j-1)*slice_size + m
+            idx_end = j*slice_size + m
             #idx_slices = np.array(list(range(j-1, j+N, num_slices))) # j+N-num_slices
             #idx_slices = idx_slices + m*slide_size*np.ones((2*num_slices, ), dtype=int)
             idx = m * num_slices + (j-1)
-            idx_slices = np.array(list(range(idx, idx+n_train)))
+            idx_slices = np.array(list(range(idx, idx+n_val)))
             slice_data[idx_slices, :, :] = val_data[:, idx_start:idx_end+1, :]
     # save validation samples to file
     np.save(os.path.join(data_dir, f"val_D{step_size}.npy"), slice_data)

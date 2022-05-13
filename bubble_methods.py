@@ -1,8 +1,14 @@
 
-# ## updated by Scott Sims 03/18/2022
+# ## adapted by Scott Sims 05/11/2022
 import numpy as np
 from scipy.optimize import fsolve
 
+#=========================================================
+# Function: Calculates number of steps for total duration 
+#=========================================================
+def get_num_steps(dt, model_steps, k_max, period_min, n_periods):
+    max_steps = np.int64(np.round(model_steps * 2**k_max)) # max slice size
+    return np.int64(np.round( max_steps * np.ceil( n_periods * period_min / (dt * max_steps)) ))
 
 #==========================================
 #  CLASS BUBBLE
@@ -78,6 +84,11 @@ class SoundWave:
         amp_samples = amp_samples[::-1] # reverse order, largest to smallest
         #freq_samples = np.random.uniform(self.freq_range[0], self.freq_range[1], self.n_waves)
         freq_samples = self.uniform_interval(self.freq_range[0], self.freq_range[1], self.n_waves)
+        idx_max = np.argmax(freq_samples)
+        idx = np.max([idx_max-2, 0])
+        temp = freq_samples[idx_max]
+        freq_samples[idx_max] = freq_samples[idx]
+        freq_samples[idx] = temp
         #freq_samples = np.sort(freq_samples)
         #freq_samples = freq_samples[::-1]
         # -----------------------------------------
