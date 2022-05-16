@@ -41,9 +41,9 @@ for key in Dic:
 #=========================================================
 n_steps = get_num_steps(dt, model_steps, k_max, period_min, n_periods)
 print(f"number of time-steps = {n_steps}")
-data_folder = f"data_dt={dt}_n-steps={n_steps}_m-steps={model_steps}_k={k_min}-{k_max}_period={period_min}-{period_max}_amp={amp_min}-{amp_max}_n-waves={n_waves}_train+val+test={n_train}+{n_val}+{n_test}"
+data_folder = f"data_dt={dt}_n-steps={n_steps}_m-steps={model_steps}_k={k_min}-{k_max}_period={period_min}-{period_max}_amp={amp_min}-{amp_max}_{n_wave}waves_train+val+test={n_train}+{n_val}+{n_test}"
 data_dir = os.path.join(os.getcwd(), 'data', data_folder)
-model_folder = f"models_dt={dt}_steps={n_steps}_m-steps={model_steps}_k={k_min}-{k_max}_period={period_min}-{period_max}_amp={amp_min}-{amp_max}_lr={learn_rate_min}-{learn_rate_max}_resnet={n_inputs}+{n_layers}x{n_neurons}+{n_outputs}"
+model_folder = f"models_dt={dt}_steps={n_steps}_m-steps={model_steps}_k={k_min}-{k_max}_period={period_min}-{period_max}_amp={amp_min}-{amp_max}_lr{n_lr}={learn_rate_min}-{learn_rate_max}_resnet={n_input}+{n_layer}x{n_neuron}+{n_output}"
 model_dir = os.path.join(os.getcwd(), 'models', model_folder)
 if not os.path.exists(data_dir):
     sys.exit("Cannot find folder ../data/{} in current directory".format(data_folder))
@@ -74,9 +74,10 @@ for step_size in step_sizes:
     models.append(torch.load(os.path.join(model_dir, model_name), map_location='cpu'))
 num_k = len(models)
 print('{} models loaded for time-stepping:'.format(num_models) )
-print('model index:  k = {} .. {}'.format(0, k_max) )
-print('step size:  2^k = {} .. {}'.format(1, step_sizes[k_max] ) )
-print('step size:   dt = {} .. {} \n'.format(dt, dt*step_sizes[k_max]) )
+print('model index:  k = {} .. {}'.format(k_min, k_max) )
+print('step size:  2^k = {} .. {}'.format(step_sizes[k_min], step_sizes[k_max] ) )
+print('dt = {}'.format(dt))
+print('step size:  dt(2^k) = {} .. {} \n'.format(dt*step_sizes[k_min], dt*step_sizes[k_max]) )
 #--------------------------------------------------
 # fix model consistencies trained on gpus (optional)
 for model in models:
@@ -112,7 +113,7 @@ fig, axs = plt.subplots(num_models, 1, figsize=(plot_x_dim, plot_y_dim*num_model
 for model in models:
     rgb = next(colors)
     k = next(iterate_k)
-    y_preds = model.uni_scale_forecast( torch.tensor(test_data[idx, 0, :n_outputs]).float(), n_steps=n_steps, y_known=torch.tensor(test_data[idx:idx+1, :, n_outputs:]).float() )
+    y_preds = model.uni_scale_forecast( torch.tensor(test_data[idx, 0, :n_output]).float(), n_steps=n_steps, y_known=torch.tensor(test_data[idx:idx+1, :, n_output:]).float() )
     R = y_preds[0, 0:n_steps, 1].detach().numpy()
     axs[k].plot(t_space, test_data[idx, 0:n_steps, 1], linestyle='-', color='gray', linewidth=10, label='R(t)')
     axs[k].plot(t_space, R, linestyle='--', color=rgb, linewidth=6, label='$\Delta t = ${}dt'.format(step_sizes[k]) )
@@ -130,7 +131,7 @@ preds_mse = list()
 times = list()
 for model in models:
     start = time.time()
-    y_preds = model.uni_scale_forecast( torch.tensor(test_data[:, 0, :n_outputs]).float(), n_steps=n_steps, y_known=torch.tensor(test_data[:, :, n_outputs:]).float() )
+    y_preds = model.uni_scale_forecast( torch.tensor(test_data[:, 0, :n_output]).float(), n_steps=n_steps, y_known=torch.tensor(test_data[:, :, n_output:]).float() )
     end = time.time()
     times.append(end - start)
     preds_mse.append(criterion(torch.tensor(test_data[:, 1:, 0]).float(), y_preds[:,:,0]).mean(-1)) # CHECK THIS! CHECK THIS!
@@ -178,18 +179,18 @@ best_mse = 1e+5
 val_data = np.load(os.path.join(data_dir, 'val_D{}.npy'.format(k_max)))
 # choose the largest time step
 for k in range(0, k_max+1):
-    step_size = np.int64(2**k)
-    y_preds = net.vectorized_multi_scale_forecast(torch.tensor(val_data[:, 0, :n_outputs]).float().to('cpu'), n_steps=n_steps, models=models[:len(models)-k], y_known=torch.tensor(val_data[:, 0, n_outputs:]).float().to('cpu'))
-    mse = criterion(torch.tensor(val_data[:, 1:, :n_outputs]).float(), y_preds).mean().item()
+    step_size = np.int64(np.round(2**k))
+    y_preds = net.vectorized_multi_scale_forecast(torch.tensor(val_data[:, 0, :n_output]).float().to('cpu'), n_steps=n_steps, models=models[:len(models)-k], y_known=torch.tensor(val_data[:, 0, n_output:]).float().to('cpu'))
+    mse = criterion(torch.tensor(val_data[:, 1:, :n_output]).float(), y_preds).mean().item()
     if mse <= best_mse:
         end_idx = len(models)-k
         best_mse = mse
 #----------------------------------------------------------
 # choose the smallest time step
 for k in range(0, end_idx):
-    step_size = np.int64(2**k)
-    y_preds = net.vectorized_multi_scale_forecast(torch.tensor(val_data[:, 0, :n_outputs]).float().to('cpu'), n_steps=n_steps, models=models[k:end_idx], y_known=torch.tensor(val_data[:, :, n_outputs:]).float().to('cpu'))
-    mse = criterion(torch.tensor(val_data[:, 1:, :n_outputs]).float(), y_preds).mean().item()
+    step_size = np.int64(np.round(2**k))
+    y_preds = net.vectorized_multi_scale_forecast(torch.tensor(val_data[:, 0, :n_output]).float().to('cpu'), n_steps=n_steps, models=models[k:end_idx], y_known=torch.tensor(val_data[:, :, n_output:]).float().to('cpu'))
+    mse = criterion(torch.tensor(val_data[:, 1:, :n_output]).float(), y_preds).mean().item()
     if mse <= best_mse:
         start_idx = k
         best_mse = mse
@@ -199,7 +200,7 @@ num_k = len(models)
 print('{} models chosen for Multiscale HiTS:'.format(num_k) ) 
 print('   k    = {} .. {}'.format(start_idx, end_idx) )
 print('  2^k   = {} .. {}'.format(2**start_idx, 2**end_idx ) )
-print('t-steps = {} .. {}\n'.format(dt*2**start_idx, dt * 2**end_idx ) )
+print('dt(2^k) = {} .. {}\n'.format(dt*2**start_idx, dt * 2**end_idx ) )
 del val_data
 
 #==========================================================
@@ -207,7 +208,7 @@ del val_data
 #==========================================================
 # multiscale time-stepping with NN
 start = time.time()
-y_preds, model_key = net.vectorized_multi_scale_forecast(torch.tensor(test_data[:, 0, :n_outputs]).float().to('cpu'), n_steps=n_steps, models=models, y_known=torch.tensor(test_data[:, :, n_outputs:]).float().to('cpu'), key=True)
+y_preds, model_key = net.vectorized_multi_scale_forecast(torch.tensor(test_data[:, 0, :n_output]).float().to('cpu'), n_steps=n_steps, models=models, y_known=torch.tensor(test_data[:, :, n_output:]).float().to('cpu'), key=True)
 end = time.time()
 multiscale_time = end - start
 multiscale_preds_mse = criterion(torch.tensor(test_data[:, 1:, :]).float(), y_preds).mean(-1)

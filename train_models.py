@@ -28,10 +28,10 @@ for key in D:
     print('{}: {}'.format(str(key), D[key]))
     # transforms key-names from dictionary into global variables, then assigns them the dictionary-values
 #=========================================================
-arch = [n_inputs]
-for j in range(n_layers):
-    arch.append(n_neurons)
-arch.append(n_outputs)
+arch = [n_input]
+for j in range(n_layer):
+    arch.append(n_neuron)
+arch.append(n_output)
 print("ResNet Architecture: {}".format(arch))
 #print('PRESS [c] TO CONTINUE. PRESS [q] TO QUIT.')
 #pdb.set_trace()
@@ -41,9 +41,9 @@ max_epoch = 100000     # the maximum training epoch for each batch size
 # Directories and Paths
 #=========================================================
 n_steps = get_num_steps(dt, model_steps, k_max, period_min, n_periods)
-data_folder = f"data_dt={dt}_n-steps={n_steps}_m-steps={model_steps}_k={k_min}-{k_max}_period={period_min}-{period_max}_amp={amp_min}-{amp_max}_n-waves={n_waves}_train+val+test={n_train}+{n_val}+{n_test}"
+data_folder = f"data_dt={dt}_n-steps={n_steps}_m-steps={model_steps}_k={k_min}-{k_max}_period={period_min}-{period_max}_amp={amp_min}-{amp_max}_{n_wave}waves_train+val+test={n_train}+{n_val}+{n_test}"
 data_dir = os.path.join(os.getcwd(), 'data', data_folder)
-model_folder = f"models_dt={dt}_steps={n_steps}_m-steps={model_steps}_k={k_min}-{k_max}_period={period_min}-{period_max}_amp={amp_min}-{amp_max}_lr={learn_rate_min}-{learn_rate_max}_resnet={n_inputs}+{n_layers}x{n_neurons}+{n_outputs}"
+model_folder = f"models_dt={dt}_steps={n_steps}_m-steps={model_steps}_k={k_min}-{k_max}_period={period_min}-{period_max}_amp={amp_min}-{amp_max}_lr{n_lr}={learn_rate_min}-{learn_rate_max}_resnet={n_input}+{n_layer}x{n_neuron}+{n_output}"
 model_dir = os.path.join(os.getcwd(), 'models', model_folder)
 if not os.path.exists(data_dir):
     print("current directory:")
@@ -59,20 +59,17 @@ copyfile(parameter_source, parameter_dest)
 #=========================================================
 # Start Training
 #=========================================================
-for k in range(k_min,k_max+1):
+for k in range(k_min, k_max+1):
         #=========================================================
         # Load Data, each with step_size = 2^k
         #=========================================================
-        step_size = np.int64(2**k)
+        step_size = np.int64(np.round(2**k))
         train_data = np.load(os.path.join(data_dir, 'train_D{}.npy'.format(step_size)))
         val_data = np.load(os.path.join(data_dir, 'val_D{}.npy'.format(step_size)))
         test_data = np.load(os.path.join(data_dir, 'test.npy'))
         n_train = train_data.shape[0]
-        print(n_train)
         n_val = val_data.shape[0]
-        print(n_val)
         n_test = test_data.shape[0]
-        print(n_test)
         n_steps = test_data.shape[1] - 1
         batch_size = np.int64(np.round(n_val*batch_fraction))
         #=========================================================
@@ -93,5 +90,5 @@ for k in range(k_min,k_max+1):
         # training
         print('training samples: {}'.format(n_train))
         print('device: {}'.format(device))
-        model.train_net(dataset, max_epoch=max_epoch, batch_size=batch_size, lr_min=learn_rate_min, lr_max=learn_rate_max, 
+        model.train_net(dataset, max_epoch=max_epoch, batch_size=batch_size, lr_list=np.linspace(learn_rate_max, learn_rate_min, n_lr),
                         model_path=os.path.join(model_dir, model_name))
