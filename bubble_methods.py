@@ -1,5 +1,5 @@
 
-# ## adapted by Scott Sims 05/11/2022
+# ## adapted by Scott Sims 05/19/2022
 import numpy as np
 from scipy.optimize import fsolve
 
@@ -119,7 +119,6 @@ class SoundWave:
         # --------------------------------
         return sum_neg + sum_pos
     # --------------------------------------------------------------------
-
     def pressure_dot(self, t):
         assert np.size(self.waves) > 0
         sum_pos = 0.0

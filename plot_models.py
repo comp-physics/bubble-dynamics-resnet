@@ -1,6 +1,6 @@
 # # Multiscale HiTS Visuals (updated visuals)
 
-# ## adapted by Scott Sims 03/18/2022
+# ## adapted by Scott Sims 05/19/2022
 # ## created by Yuying Liu, 05/07/2020
 #=========================================================
 # IMPORT PACKAGES
@@ -28,10 +28,10 @@ from bubble_methods import get_num_steps
 # Input Arguments
 #=========================================================
 with open("parameters.yml", 'r') as stream:
-    Dic = yaml.safe_load(stream)
-for key in Dic:
-    globals()[str(key)] = Dic[key]
-    print('{}: {}'.format(str(key), Dic[key]))
+    D = yaml.safe_load(stream)
+for key in D:
+    globals()[str(key)] = D[key]
+    print('{}: {}'.format(str(key), D[key]))
     # transforms key-names from dictionary into global variables, then assigns them the dictionary-values
 #print('TO CONTINUE, PRESS [c] THEN [ENTER]')
 #print('TO QUIT, PRESS [q] THEN [ENTER]')
@@ -63,9 +63,9 @@ file_fig_multiscale = f"plot_multiscale_{system}.png"
 test_data = np.load(os.path.join(data_dir, 'test.npy'))
 #--------------------------------------------------
 # list of k-values: k = 0 ... k_max
-ks = list(range(0,k_max+1))
+ks = list(range(k_min,k_max+1))
 step_sizes = [2**k for k in ks]
-num_models = k_max+1
+num_models = len(ks)
 #--------------------------------------------------
 # load models
 models = list()
@@ -75,9 +75,9 @@ for step_size in step_sizes:
 num_k = len(models)
 print('{} models loaded for time-stepping:'.format(num_models) )
 print('model index:  k = {} .. {}'.format(k_min, k_max) )
-print('step size:  2^k = {} .. {}'.format(step_sizes[k_min], step_sizes[k_max] ) )
+print('step size:  2^k = {} .. {}'.format(step_sizes[0], step_sizes[k_max-k_min] ) )
 print('dt = {}'.format(dt))
-print('step size:  dt(2^k) = {} .. {} \n'.format(dt*step_sizes[k_min], dt*step_sizes[k_max]) )
+print('step size:  (2^k)dt = {} .. {} \n'.format(dt*step_sizes[0], dt*step_sizes[k_max-k_min]) )
 #--------------------------------------------------
 # fix model consistencies trained on gpus (optional)
 for model in models:
@@ -113,7 +113,7 @@ fig, axs = plt.subplots(num_models, 1, figsize=(plot_x_dim, plot_y_dim*num_model
 for model in models:
     rgb = next(colors)
     k = next(iterate_k)
-    y_preds = model.uni_scale_forecast( torch.tensor(test_data[idx, 0, :n_output]).float(), n_steps=n_steps, y_known=torch.tensor(test_data[idx:idx+1, :, n_output:]).float() )
+    y_preds = model.uni_scale_forecast( torch.tensor(test_data[idx, 0, :n_output]).float(), n_steps=n_steps, y_known=torch.tensor(test_data[idx, :, n_output:]).float() )
     R = y_preds[0, 0:n_steps, 1].detach().numpy()
     axs[k].plot(t_space, test_data[idx, 0:n_steps, 1], linestyle='-', color='gray', linewidth=10, label='R(t)')
     axs[k].plot(t_space, R, linestyle='--', color=rgb, linewidth=6, label='$\Delta t = ${}dt'.format(step_sizes[k]) )
@@ -131,27 +131,28 @@ preds_mse = list()
 times = list()
 for model in models:
     start = time.time()
-    y_preds = model.uni_scale_forecast( torch.tensor(test_data[:, 0, :n_output]).float(), n_steps=n_steps, y_known=torch.tensor(test_data[:, :, n_output:]).float() )
+    y_preds = model.uni_scale_forecast( torch.tensor(test_data[:, 0, :n_output]).float(), n_steps=n_steps, y_known=torch.tensor(test_data[:, 0, n_output:]).float() )
     end = time.time()
     times.append(end - start)
     preds_mse.append(criterion(torch.tensor(test_data[:, 1:, 0]).float(), y_preds[:,:,0]).mean(-1)) # CHECK THIS! CHECK THIS!
 #----------------------------------------------------------
 fig = plt.figure(figsize=(plot_x_dim, plot_y_dim))
 colors=iter( (plt.cm.rainbow(np.linspace(0, 1, len(ks)))))
-dot_sizes = iter( ( np.linspace(1,20,len(preds_mse)) ) )
+dot_sizes = iter(( np.linspace(1,20,len(preds_mse)) ))
 t_array = np.array(t_space)
 m_steps = n_steps-1
 max_log = 0
 min_log = 0
-for k in range(0,k_max+1):
-    err = preds_mse[k]
+for idx in range(len(ks)):
+    k = ks[idx]
+    err = preds_mse[idx]
     err = err.mean(0).numpy()
     rgb = next(colors)
-    n_forward = np.int64( np.round( m_steps / 2**k ) )
+    n_forward = np.int64( np.round( m_steps / step_sizes[idx] ) )
     key = np.int64( np.round( np.linspace(0,m_steps,n_forward+1) ) )
-    t_k = t_array[key]
-    log_err_k = np.log10(err[key])
-    plt.plot(t_k, log_err_k, 'o', fillstyle='full', linestyle='-', linewidth=3, markersize=next(dot_sizes), color=rgb, label='$\Delta\ t$={}dt'.format(step_sizes[k]))
+    t_key = t_array[key]
+    log_err_key = np.log10(err[key])
+    plt.plot(t_key, log_err_key, 'o', fillstyle='full', linestyle='-', linewidth=3, markersize=next(dot_sizes), color=rgb, label='$\Delta\ t$={}dt'.format(step_sizes[j]))
     #max_log = max_log + min(0, np.max(log_err_k[1:])) # accumulate maximum log(MSE) < 0 in order to calculate a average-ceiling < 0
 
 min_log = np.min(err) # err = preds_mse[k_max] from last iteration above
@@ -174,33 +175,33 @@ plt.savefig(file_fig_mse_models)
 #==========================================================
 # cross validation (model selections) 
 start_idx = 0
-end_idx = k_max   # or len(models)-1
+end_idx = len(ks)
 best_mse = 1e+5
 val_data = np.load(os.path.join(data_dir, 'val_D{}.npy'.format(k_max)))
 # choose the largest time step
-for k in range(0, k_max+1):
-    step_size = np.int64(np.round(2**k))
-    y_preds = net.vectorized_multi_scale_forecast(torch.tensor(val_data[:, 0, :n_output]).float().to('cpu'), n_steps=n_steps, models=models[:len(models)-k], y_known=torch.tensor(val_data[:, 0, n_output:]).float().to('cpu'))
+for idx in range(start_idx, end_idx+1):
+    step_size = step_sizes[idx]
+    y_preds = net.vectorized_multi_scale_forecast(torch.tensor(val_data[:, 0, :n_output]).float().to('cpu'), n_steps=n_steps, models=models[start_idx:idx+1], y_known=torch.tensor(val_data[:, 0, n_output:]).float().to('cpu'))
     mse = criterion(torch.tensor(val_data[:, 1:, :n_output]).float(), y_preds).mean().item()
     if mse <= best_mse:
-        end_idx = len(models)-k
+        end_idx = idx
         best_mse = mse
 #----------------------------------------------------------
 # choose the smallest time step
-for k in range(0, end_idx):
-    step_size = np.int64(np.round(2**k))
-    y_preds = net.vectorized_multi_scale_forecast(torch.tensor(val_data[:, 0, :n_output]).float().to('cpu'), n_steps=n_steps, models=models[k:end_idx], y_known=torch.tensor(val_data[:, :, n_output:]).float().to('cpu'))
+for idx in range(start_idx, end_idx+1):
+    step_size = step_sizes[idx]
+    y_preds = net.vectorized_multi_scale_forecast(torch.tensor(val_data[:, 0, :n_output]).float().to('cpu'), n_steps=n_steps, models=models[idx:end_idx+1], y_known=torch.tensor(val_data[:, :, n_output:]).float().to('cpu'))
     mse = criterion(torch.tensor(val_data[:, 1:, :n_output]).float(), y_preds).mean().item()
     if mse <= best_mse:
-        start_idx = k
+        start_idx = idx
         best_mse = mse
 #----------------------------------------------------------
 models = models[start_idx:(end_idx+1)]
 num_k = len(models)
 print('{} models chosen for Multiscale HiTS:'.format(num_k) ) 
 print('   k    = {} .. {}'.format(start_idx, end_idx) )
-print('  2^k   = {} .. {}'.format(2**start_idx, 2**end_idx ) )
-print('dt(2^k) = {} .. {}\n'.format(dt*2**start_idx, dt * 2**end_idx ) )
+print('  2^k   = {} .. {}'.format(2**(start_idx+k_min), 2**(end_idx+k_min) ) )
+print('(2^k)dt = {} .. {}\n'.format(dt*2**(start_idx+k_min), dt*2**(end_idx+k_min) ) )
 del val_data
 
 #==========================================================
@@ -219,12 +220,11 @@ model_key = model_key.detach().numpy()
 # visualize forecasting error at each time step    
 fig = plt.figure(figsize=(plot_x_dim, plot_y_dim))
 colors=iter(plt.cm.rainbow(np.linspace(0, 1, len(ks))))
-multiscale_err = multiscale_preds_mse.mean(0).detach().numpy()
-for k in range(len(preds_mse)):
-    err = preds_mse[k]
-    err = err.mean(0).detach().numpy()
+for j in range(len(preds_mse)):
+    err = preds_mse[j].mean(0).detach().numpy()
     rgb = next(colors)
-    plt.plot(t_space, np.log10(err), linestyle='-', color=rgb, linewidth=4, label='$\Delta\ t$={}dt'.format(step_sizes[k]))
+    plt.plot(t_space, np.log10(err), linestyle='-', color=rgb, linewidth=4, label='$\Delta\ t$={}dt'.format(step_sizes[j]))
+multiscale_err = multiscale_preds_mse.mean(0).detach().numpy()
 plt.plot(t_space, np.log10(multiscale_err), linestyle='-', color='k', linewidth=4, label='multiscale')
 plt.legend(fontsize=legend_fontsize, loc='upper center', ncol=6, bbox_to_anchor=(0.5, 1.2))
 plt.xticks(fontsize=axis_fontsize)

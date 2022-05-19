@@ -1,6 +1,5 @@
-# ## updated by Scott Sims, 03/19/2022
+# ## adapted by Scott Sims, 05/19/2022
 # ## created by Yuying Liu, 04/30/2020
-
 import os
 import sys
 import pdb

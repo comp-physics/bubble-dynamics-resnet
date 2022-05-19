@@ -1,4 +1,4 @@
-# ## adapted by Scott Sims 05/11/2022
+# ## adapted by Scott Sims 05/15/2022
 # Rayleigh-Plesset Data Generation for Multiscale Time-Steppers with Residual Neural Networks
 
 #----------------------------------
