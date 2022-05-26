@@ -22,7 +22,6 @@ module_dir = os.path.abspath( os.path.join(os.getcwd(),'src'))
 if module_dir not in sys.path:
     sys.path.append(module_dir)
 import ResNet as net
-#--------------------------------------------------
 from bubble_methods import get_num_steps
 #=========================================================
 # Input Arguments
@@ -31,7 +30,7 @@ with open("parameters.yml", 'r') as stream:
     D = yaml.safe_load(stream)
 for key in D:
     globals()[str(key)] = D[key]
-    print('{}: {}'.format(str(key), D[key]))
+    print(f"{str(key)}: {D[key]}")
     # transforms key-names from dictionary into global variables, then assigns them the dictionary-values
 #print('TO CONTINUE, PRESS [c] THEN [ENTER]')
 #print('TO QUIT, PRESS [q] THEN [ENTER]')
@@ -46,9 +45,9 @@ data_dir = os.path.join(os.getcwd(), 'data', data_folder)
 model_folder = f"models_dt={dt}_steps={n_steps}_m-steps={model_steps}_k={k_min}-{k_max}_period={period_min}-{period_max}_amp={amp_min}-{amp_max}_lr{n_lr}={learn_rate_min}-{learn_rate_max}_resnet={n_input}+{n_layer}x{n_neuron}+{n_output}"
 model_dir = os.path.join(os.getcwd(), 'models', model_folder)
 if not os.path.exists(data_dir):
-    sys.exit("Cannot find folder ../data/{} in current directory".format(data_folder))
+    sys.exit(f"Cannot find folder ../data/{data_folder} in current directory")
 if not os.path.exists(model_dir):
-    sys.exit("Cannot find folder ../models/{} in current directory".format(model_folder))
+    sys.exit(f"Cannot find folder ../models/{model_folder} in current directory")
 #--------------------------------------------------
 # file names for figures
 file_fig_uniscale = f"plot_uniscale_{system}.png"
@@ -63,21 +62,21 @@ file_fig_multiscale = f"plot_multiscale_{system}.png"
 test_data = np.load(os.path.join(data_dir, 'test.npy'))
 #--------------------------------------------------
 # list of k-values: k = 0 ... k_max
-ks = list(range(k_min,k_max+1))
-step_sizes = [2**k for k in ks]
+ks = list(range(k_min, k_max+1))
+step_sizes = [ np.int64(np.round(2**k)) for k in ks ]
 num_models = len(ks)
 #--------------------------------------------------
 # load models
 models = list()
 for step_size in step_sizes:
-    model_name = 'model_D{}.pt'.format(step_size)
+    model_name = f"model_D{step_size}.pt"
     models.append(torch.load(os.path.join(model_dir, model_name), map_location='cpu'))
 num_k = len(models)
-print('{} models loaded for time-stepping:'.format(num_models) )
-print('model index:  k = {} .. {}'.format(k_min, k_max) )
-print('step size:  2^k = {} .. {}'.format(step_sizes[0], step_sizes[k_max-k_min] ) )
-print('dt = {}'.format(dt))
-print('step size:  (2^k)dt = {} .. {} \n'.format(dt*step_sizes[0], dt*step_sizes[k_max-k_min]) )
+print(f"{num_models} models loaded for time-stepping:")
+print(f"model index:  k = {k_min} .. {k_max}")
+print(f"step size:  2^k = {step_sizes[0]} .. {step_sizes[k_max-k_min]}" )
+print(f"dt = {dt}")
+print(f"step size:  (2^k)dt = {dt*step_sizes[0]} .. {dt*step_sizes[k_max-k_min]} \n")
 #--------------------------------------------------
 # fix model consistencies trained on gpus (optional)
 for model in models:
@@ -107,21 +106,27 @@ file_fig_multiscale = os.path.abspath( os.path.join(figure_dir, file_fig_multisc
 # Plot Predictions of Individual ResNet time-steppers
 #==========================================================
 idx = 0
-iterate_k = iter(ks)
-colors=iter(plt.cm.rainbow(np.linspace(0, 1, len(ks))))
+# iterate_k = iter(ks)
+colors= plt.cm.rainbow(np.linspace(0, 1, len(ks))) # iter(plt.cm.rainbow(np.linspace(0, 1, len(ks))))
 fig, axs = plt.subplots(num_models, 1, figsize=(plot_x_dim, plot_y_dim*num_models*1.3))
-for model in models:
-    rgb = next(colors)
-    k = next(iterate_k)
-    y_preds = model.uni_scale_forecast( torch.tensor(test_data[idx, 0, :n_output]).float(), n_steps=n_steps, y_known=torch.tensor(test_data[idx, :, n_output:]).float() )
+print(f"individual time-stepper predictions")
+for j in range(len(models)):
+    print(f"j = {j}")
+    model = models[j]
+    rgb = colors[j] # next(colors)
+    # k = ks[j]     # next(iterate_k)
+    #print(torch.tensor(test_data[idx, 0, :n_output]).float().shape)
+    #print(torch.tensor(test_data[idx, :, n_output:]).float().shape)
+    y_preds = model.uni_scale_forecast( torch.tensor(test_data[idx:idx+1, 0, :n_output]).float(), n_steps=n_steps, y_known=torch.tensor(test_data[idx:idx+1, :, n_output:]).float() )
     R = y_preds[0, 0:n_steps, 1].detach().numpy()
-    axs[k].plot(t_space, test_data[idx, 0:n_steps, 1], linestyle='-', color='gray', linewidth=10, label='R(t)')
-    axs[k].plot(t_space, R, linestyle='--', color=rgb, linewidth=6, label='$\Delta t = ${}dt'.format(step_sizes[k]) )
-    axs[k].legend(fontsize=legend_fontsize, loc='upper center', ncol=5, bbox_to_anchor=(0.5, 1.17))
-    axs[k].tick_params(axis='both', which='major', labelsize=axis_fontsize)
-    axs[k].grid(axis='y')
+    axs[j].plot(t_space, test_data[idx, 0:n_steps, 1], linestyle='-', color='gray', linewidth=10, label='R(t)')
+    axs[j].plot(t_space, R, linestyle='--', color=rgb, linewidth=6, label='$\Delta t = ${}dt'.format(step_sizes[j]) )
+    axs[j].legend(fontsize=legend_fontsize, loc='upper center', ncol=5, bbox_to_anchor=(0.5, 1.17))
+    axs[j].tick_params(axis='both', which='major', labelsize=axis_fontsize)
+    axs[j].grid(axis='y')
 plt.show()
 plt.savefig(file_fig_uniscale)
+print("figure saved")
 
 #==========================================================
 # Plot Log(MSE) of Predictions (individual models)
@@ -131,28 +136,30 @@ preds_mse = list()
 times = list()
 for model in models:
     start = time.time()
-    y_preds = model.uni_scale_forecast( torch.tensor(test_data[:, 0, :n_output]).float(), n_steps=n_steps, y_known=torch.tensor(test_data[:, 0, n_output:]).float() )
+    y_preds = model.uni_scale_forecast( torch.tensor(test_data[:, 0, :n_output]).float(), n_steps=n_steps, y_known=torch.tensor(test_data[:, :, n_output:]).float() )
     end = time.time()
     times.append(end - start)
     preds_mse.append(criterion(torch.tensor(test_data[:, 1:, 0]).float(), y_preds[:,:,0]).mean(-1)) # CHECK THIS! CHECK THIS!
 #----------------------------------------------------------
 fig = plt.figure(figsize=(plot_x_dim, plot_y_dim))
-colors=iter( (plt.cm.rainbow(np.linspace(0, 1, len(ks)))))
-dot_sizes = iter(( np.linspace(1,20,len(preds_mse)) ))
+colors= plt.cm.rainbow(np.linspace(0, 1, len(ks))) # iter( plt.cm.rainbow(np.linspace(0, 1, len(ks))) )
+dot_sizes = np.linspace(1,20,len(preds_mse)) # iter(( np.linspace(1,20,len(preds_mse)) ))
 t_array = np.array(t_space)
 m_steps = n_steps-1
 max_log = 0
 min_log = 0
-for idx in range(len(ks)):
-    k = ks[idx]
-    err = preds_mse[idx]
+print("MSE of individual time-steppers")
+for j in range(len(ks)):
+    print(f"j = {j}")
+    k = ks[j]
+    err = preds_mse[j]
     err = err.mean(0).numpy()
-    rgb = next(colors)
-    n_forward = np.int64( np.round( m_steps / step_sizes[idx] ) )
+    rgb = colors[j]
+    n_forward = np.int64( np.round( m_steps / step_sizes[j] ) )
     key = np.int64( np.round( np.linspace(0,m_steps,n_forward+1) ) )
     t_key = t_array[key]
     log_err_key = np.log10(err[key])
-    plt.plot(t_key, log_err_key, 'o', fillstyle='full', linestyle='-', linewidth=3, markersize=next(dot_sizes), color=rgb, label='$\Delta\ t$={}dt'.format(step_sizes[j]))
+    plt.plot(t_key, log_err_key, 'o', fillstyle='full', linestyle='-', linewidth=3, markersize=dot_sizes[j], color=rgb, label='$\Delta\ t$={}dt'.format(step_sizes[j]))
     #max_log = max_log + min(0, np.max(log_err_k[1:])) # accumulate maximum log(MSE) < 0 in order to calculate a average-ceiling < 0
 
 min_log = np.min(err) # err = preds_mse[k_max] from last iteration above
@@ -168,7 +175,7 @@ plt.grid(axis = 'y')
 plt.ylim(ymin=mid_log-d_log, ymax=mid_log+d_log)
 plt.show()
 plt.savefig(file_fig_mse_models)
-
+print("figure saved")
 
 #==========================================================
 # Choose Range of Models that Minimize MSE (when combined)
@@ -179,26 +186,30 @@ end_idx = len(ks)
 best_mse = 1e+5
 val_data = np.load(os.path.join(data_dir, 'val_D{}.npy'.format(k_max)))
 # choose the largest time step
-for idx in range(start_idx, end_idx+1):
-    step_size = step_sizes[idx]
-    y_preds = net.vectorized_multi_scale_forecast(torch.tensor(val_data[:, 0, :n_output]).float().to('cpu'), n_steps=n_steps, models=models[start_idx:idx+1], y_known=torch.tensor(val_data[:, 0, n_output:]).float().to('cpu'))
+print("choose larget time-stepper")
+for j in range(start_idx, end_idx+1):
+    print(f"j = {j}")
+    step_size = step_sizes[j]
+    y_preds = net.vectorized_multi_scale_forecast(torch.tensor(val_data[:, 0, :n_output]).float().to('cpu'), n_steps=n_steps, models=models[start_idx:j+1], y_known=torch.tensor(val_data[:, :, n_output:]).float().to('cpu'))
     mse = criterion(torch.tensor(val_data[:, 1:, :n_output]).float(), y_preds).mean().item()
     if mse <= best_mse:
-        end_idx = idx
+        end_idx = j
         best_mse = mse
 #----------------------------------------------------------
 # choose the smallest time step
-for idx in range(start_idx, end_idx+1):
-    step_size = step_sizes[idx]
-    y_preds = net.vectorized_multi_scale_forecast(torch.tensor(val_data[:, 0, :n_output]).float().to('cpu'), n_steps=n_steps, models=models[idx:end_idx+1], y_known=torch.tensor(val_data[:, :, n_output:]).float().to('cpu'))
+print("choose smallest time-stepper")
+for j in range(start_idx, end_idx+1):
+    print(f"j = {j}")
+    step_size = step_sizes[j]
+    y_preds = net.vectorized_multi_scale_forecast(torch.tensor(val_data[:, 0, :n_output]).float().to('cpu'), n_steps=n_steps, models=models[j:end_idx+1], y_known=torch.tensor(val_data[:, :, n_output:]).float().to('cpu'))
     mse = criterion(torch.tensor(val_data[:, 1:, :n_output]).float(), y_preds).mean().item()
     if mse <= best_mse:
-        start_idx = idx
+        start_idx = j
         best_mse = mse
 #----------------------------------------------------------
 models = models[start_idx:(end_idx+1)]
 num_k = len(models)
-print('{} models chosen for Multiscale HiTS:'.format(num_k) ) 
+print('{} models chosen for Multiscale HiTS:'.format(num_k) )
 print('   k    = {} .. {}'.format(start_idx, end_idx) )
 print('  2^k   = {} .. {}'.format(2**(start_idx+k_min), 2**(end_idx+k_min) ) )
 print('(2^k)dt = {} .. {}\n'.format(dt*2**(start_idx+k_min), dt*2**(end_idx+k_min) ) )
@@ -212,17 +223,19 @@ start = time.time()
 y_preds, model_key = net.vectorized_multi_scale_forecast(torch.tensor(test_data[:, 0, :n_output]).float().to('cpu'), n_steps=n_steps, models=models, y_known=torch.tensor(test_data[:, :, n_output:]).float().to('cpu'), key=True)
 end = time.time()
 multiscale_time = end - start
-multiscale_preds_mse = criterion(torch.tensor(test_data[:, 1:, :]).float(), y_preds).mean(-1)
+multiscale_preds_mse = criterion(torch.tensor(test_data[:, 1:, :n_output]).float(), y_preds).mean(-1)
 # added additional argument to function 'vectorized_multi_scale_forecast( ... , key=True)' in order to data of each individual ResNet
 model_key = model_key.detach().numpy()
 #model_key_plus = np.delete(model_key, np.argwhere(model_key==0) )
 #----------------------------------------------------------
 # visualize forecasting error at each time step    
 fig = plt.figure(figsize=(plot_x_dim, plot_y_dim))
-colors=iter(plt.cm.rainbow(np.linspace(0, 1, len(ks))))
-for j in range(len(preds_mse)):
+colors= plt.cm.rainbow(np.linspace(0, 1, len(ks))) # iter(plt.cm.rainbow(np.linspace(0, 1, len(ks))))
+print("MSE of multiscale time-steppers")
+for j in range(len(preds_mse)+1):
+    print(f"j = {j}")
     err = preds_mse[j].mean(0).detach().numpy()
-    rgb = next(colors)
+    rgb = colors[j]
     plt.plot(t_space, np.log10(err), linestyle='-', color=rgb, linewidth=4, label='$\Delta\ t$={}dt'.format(step_sizes[j]))
 multiscale_err = multiscale_preds_mse.mean(0).detach().numpy()
 plt.plot(t_space, np.log10(multiscale_err), linestyle='-', color='k', linewidth=4, label='multiscale')
@@ -282,7 +295,7 @@ plt.yticks(fontsize=axis_fontsize)
 plt.grid( axis='y')
 plt.savefig(file_fig_multiscale)
 
-#==========================================================
+#=========================================================
 # Print Computation Time (sec)
 #=========================================================
 print('ensembled multiscale compute time = {:.4f} s'.format(multiscale_time))

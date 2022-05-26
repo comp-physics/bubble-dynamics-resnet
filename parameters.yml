@@ -20,8 +20,8 @@ Rdot_init: 0.0        # initial radial velocity
 n_train: 128          # number of training samples (before slicing into sub-intervals)
 n_val: 64             # number of validation samples (before slicing into sub-intervals)
 n_test: 128           # number of testing samples (before slicing into sub-intervals)
-n_layer: 3           # number of layers
-n_neuron: 128        # number of neurons per layer
+n_layer: 3           # number of hidden layers
+n_neuron: 128        # number of neurons per hidden layer
 n_input: 4           # ResNet inputs (R, Rdot, P, Pdot)
 n_output: 2          # ResNet outputs (R, Rdot)
 n_epochs: 100000      # number of training epochs per learning rate

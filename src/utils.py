@@ -35,12 +35,12 @@ class DataSet:
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
         # data
-        x_idx = 0
-        y_start_idx = x_idx + step_size
-        y_end_idx = x_idx + num_steps
-        self.train_x = torch.tensor(train_data[:, x_idx, :]).float().to(self.device)
+        t_idx = 0
+        y_start_idx = t_idx + step_size
+        y_end_idx = t_idx + num_steps
+        self.train_x = torch.tensor(train_data[:, t_idx, :]).float().to(self.device)
         self.train_ys = torch.tensor(train_data[:, y_start_idx:y_end_idx:step_size, :]).float().to(self.device)
-        self.val_x = torch.tensor(val_data[:, x_idx, :]).float().to(self.device)
+        self.val_x = torch.tensor(val_data[:, t_idx, :]).float().to(self.device)
         self.val_ys = torch.tensor(val_data[:, y_start_idx:y_end_idx:step_size, :]).float().to(self.device)
         self.test_x = torch.tensor(test_data[:, 0, :]).float().to(self.device)
         self.test_ys = torch.tensor(test_data[:, 1:, :]).float().to(self.device)

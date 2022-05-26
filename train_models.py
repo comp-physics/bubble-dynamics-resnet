@@ -34,7 +34,7 @@ arch.append(n_output)
 print("ResNet Architecture: {}".format(arch))
 #print('PRESS [c] TO CONTINUE. PRESS [q] TO QUIT.')
 #pdb.set_trace()
-#---------------------------------------           
+#---------------------------------------
 max_epoch = 100000     # the maximum training epoch for each batch size
 #=========================================================
 # Directories and Paths
