@@ -30,6 +30,9 @@ learn_rate_min: 1.0e-4
 learn_rate_max: 1.0e-3
 n_lr: 2
 #-------------------
+n_rungs: 8            # number of rungs on ladder between two critical points of Radius
+steep_Rdot: 3         # steepness threshold for Rdot, which signals a sharp cusp
+#-------------------
 viscosity_dynamic: 0.0  # 1.0e-3  # (Pa*s) dynamic viscosity of liquid ; 8.63e-4
 R_eq: 100.0e-6          # (m) equilibrium radius of bubble a.k.a. R_eq  ; 50.0e-6
 P_eq: 1.0e+5            # 1.0e+5 ; (Pa) ambient pressure outside bubble ; 3.0e4

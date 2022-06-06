@@ -96,8 +96,8 @@ class ResNet(torch.nn.Module):
             assert (self.n_inputs == self.n_outputs)
         else:
             assert (self.n_inputs > self.n_outputs)
-            assert y_known.shape[0] == y_init.shape[0] # CORRECT, no modification needed
-            assert y_known.shape[1] > n_steps # CORRECT, no modification needed
+            assert y_known.shape[0] == y_init.shape[0] # don't modify (unless necessary)
+            assert y_known.shape[1] > n_steps # don't modify (unless necessary)
         #-----------------------------------------------------
         steps = list()
         preds = list()
@@ -119,11 +119,11 @@ class ResNet(torch.nn.Module):
             preds.append(y_next[:, :self.n_outputs])           # creates a list of vectors { x(i) } = [x(1), x(2), ... , x(n/k)]
             cur_step += self.step_size     # updates NN step_size: i*k
             y_prev = y_next
-
+        #---------------------------------------------------------
         # include the initial frame
         steps.insert(0, 0)
         preds.insert(0, torch.tensor(y_init).float().to(self.device))
-
+        #---------------------------------------------------------
         # interpolations
         preds = torch.stack(preds, 2).detach().numpy()
         #preds = preds[:, :, 0:self.n_outputs]
