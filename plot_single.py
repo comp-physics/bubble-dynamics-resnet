@@ -104,7 +104,7 @@ file_fig_mse_potential = os.path.abspath( os.path.join(figure_dir, file_fig_mse_
 #==========================================================
 # MSE of LADDER descent
 #==========================================================
-M = 0
+num_ladders = 0
 for k in range(num_k):
     models = models[k]
     step_size = step_sizes[k]
@@ -151,7 +151,7 @@ for k in range(num_k):
             R_descent = R_descent[1:-1]
             j = idx_top
             if (idx_bot + step_size) <= n_steps:
-                M = M + 1
+                num_ladders = num_ladders + 1
                 for m in range(n_rungs):
                     r = R_descent[m]
                     while( R[j] > r ):
@@ -166,4 +166,4 @@ for k in range(num_k):
                     mse_ladder[m] += (y_preds[0, -1, 1].detach().numpy() - R[idx+step_size])**2
 #========================================================================
 for m in range(n_rungs):
-    mse_ladder[m] = mse_ladder[m]/M
+    mse_ladder[m] = mse_ladder[m]/num_ladders

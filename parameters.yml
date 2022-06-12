@@ -22,8 +22,8 @@ n_val: 64             # number of validation samples (before slicing into sub-in
 n_test: 128           # number of testing samples (before slicing into sub-intervals)
 n_layer: 3           # number of hidden layers
 n_neuron: 128        # number of neurons per hidden layer
-n_input: 4           # ResNet inputs (R, Rdot, P, Pdot)
-n_output: 2          # ResNet outputs (R, Rdot)
+n_input: 4           # ResNet inputs: (R, Rdot, P, Pdot)
+n_output: 2          # ResNet outputs: (R, Rdot)
 n_epochs: 100000      # number of training epochs per learning rate
 batch_fraction: 0.1   # batch size = fraction of validation samples post processing (e.g. 0.1 = 10%)
 learn_rate_min: 1.0e-4

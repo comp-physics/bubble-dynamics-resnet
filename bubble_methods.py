@@ -206,7 +206,7 @@ class SoundWave:
         # B: maximum sum of samples
         # ------------------------------------------
         assert B >= A
-        r = np.random.uniform(0.3, 1, N)
+        r = np.random.uniform(0.3, 1, N) # modify 1st argument to change minimum amplitude
         r = r * np.random.uniform(A,B) / np.sum(r)
         return r
         # expect_a = N/2 
