@@ -1,10 +1,12 @@
 ---
 system: 'RP'
-dt: 0.02              # 1.0 smallest time-step; smallest duration between 2 data points
+dt: 0.02              # smallest time-step between 2 data points
 n_periods: 6          # duration > n_periods * period_min (see below)
-k_min: 5              # minimum exponent for multiplier of dt (e.g. time-step = dt * 2^k) 
-k_max: 6              # maximum exponent for multiplier of dt (e.g. time-step = dt * 2^k) 
-model_steps: 7        # (odd preferred) number of prediction steps during training; also determines the slice-size to chop the data-duration
+n_delta: 3            # number of models to train, each for different step-sizes
+delta_min: 0.6        # minimum step-size between predictions (first model) 
+delta_max: 1.0          # maximum step-size between predictions (last model)
+n_decimal_delta: 1
+model_steps: 2        # (odd preferred) number of prediction steps during training; also determines the slice-size to chop the data-duration
 #--------------------
 abs_tol: 1.0e-8
 rel_tol: 1.0e-8
@@ -17,21 +19,22 @@ amp_max: 1.5          # smallest supremum of superposition of amplitudes |Cp(t)|
 R_init: 1.0           # initial bubble radius (normalized)
 Rdot_init: 0.0        # initial radial velocity
 #-------------------
-n_train: 128          # number of training samples (before slicing into sub-intervals)
-n_val: 64             # number of validation samples (before slicing into sub-intervals)
-n_test: 128           # number of testing samples (before slicing into sub-intervals)
+n_train: 256          # number of training samples (before slicing into sub-intervals)
+n_val: 128             # number of validation samples (before slicing into sub-intervals)
+n_test: 256           # number of testing samples (before slicing into sub-intervals)
 n_layer: 3           # number of hidden layers
 n_neuron: 128        # number of neurons per hidden layer
 n_input: 4           # ResNet inputs: (R, Rdot, P, Pdot)
 n_output: 2          # ResNet outputs: (R, Rdot)
 n_epochs: 100000      # number of training epochs per learning rate
-batch_fraction: 0.1   # batch size = fraction of validation samples post processing (e.g. 0.1 = 10%)
+n_batch: 10           # number of batches to divide number of samples into
+n_lr: 2
 learn_rate_min: 1.0e-4
 learn_rate_max: 1.0e-3
-n_lr: 2
 #-------------------
 n_rungs: 8            # number of rungs on ladder between two critical points of Radius
-steep_Rdot: 3         # steepness threshold for Rdot, which signals a sharp cusp
+steep_Rdot: 2         # steepness threshold for Rdot, which signals a sharp cusp
+n_decimal_cp: 3
 #-------------------
 viscosity_dynamic: 0.0  # 1.0e-3  # (Pa*s) dynamic viscosity of liquid ; 8.63e-4
 R_eq: 100.0e-6          # (m) equilibrium radius of bubble a.k.a. R_eq  ; 50.0e-6

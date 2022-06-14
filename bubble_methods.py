@@ -10,6 +10,42 @@ def get_num_steps(dt, model_steps, k_max, period_min, n_periods):
     max_steps = np.int64(np.round(model_steps * 2**k_max)) # max slice size
     return np.int64(np.round( max_steps * np.ceil( n_periods * period_min / (dt * max_steps)) ))
 
+
+#========================================================
+# Functions for calculating the Hamiltonian
+#========================================================
+def F(r,Cp,Ca,S,poly_index):
+    return ((Ca+Cp)*r + 2/S)*(r**(3*poly_index-1)) - (2/S+Ca)
+
+def PE(r,Req,Cp,Ca,S,poly_index):
+    a,b,c = (2/S + Ca)/(poly_index-1), 3/S, (Ca+Cp)
+    U = (r**(-3*(poly_index-1)))*a + (r**2)*b + (r**3)*c - ( (Req**(-3*(poly_index-1)))*a + (Req**2)*b + (Req**3)*c )
+    return U/3
+
+def KE(r,rdot):
+    return 0.5*(r**2)*(rdot**2)
+
+def H(r,rdot,Req,Cp,Ca,S,poly_index):
+    return KE(r,rdot) + PE(r,Req,Cp,Ca,S,poly_index)
+
+def Hdot(r,Req,Cp_dot):
+    # only works when viscosity = 0 (i.e. Reynolds = infty)
+    return (r**3 - Req**3)*Cp_dot / 3
+
+def get_Req_vs_Cp(Cp_min,Cp_max,N,Ca,S,poly_index):
+    Cp = np.linspace(Cp_min, Cp_max, N)
+    print(f"N = {N}")
+    print(f"Cp = {Cp[0]: .3f},{Cp[1]: .3f}, {Cp[2]: .3f},...")
+    A = Cp + Ca
+    #----------------------------------------------------
+    Req = np.zeros(N)
+    Req[0] = fsolve(F, x0=0.2, args=(Cp[0], Ca, S, poly_index))
+    for j in range(1,N):
+        Req[j] = fsolve(F, x0=Req[j-1], args=(Cp[j], Ca, S))
+    #-----------------------------------------------------
+    return Req, Cp
+
+
 #==========================================
 #  CLASS BUBBLE
 #==========================================

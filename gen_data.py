@@ -1,6 +1,5 @@
 # ## adapted by Scott Sims 05/15/2022
-# Rayleigh-Plesset Data Generation for Multiscale Time-Steppers with Residual Neural Networks
-
+# Rayleigh-Plesset Data Generation for training neural network time-steppers
 #----------------------------------
 # universal packages
 #----------------------------------
@@ -68,7 +67,7 @@ print(f"t_space = {t_space[0:3]}...{t_space[n_steps-2:n_steps+1]}")
 #=========================================================
 # Directories and Paths
 #=========================================================
-data_folder = f"data_dt={dt}_n-steps={n_steps}_m-steps={model_steps}_k={k_min}-{k_max}_period={period_min}-{period_max}_amp={amp_min}-{amp_max}_{n_wave}waves_train+val+test={n_train}+{n_val}+{n_test}"
+data_folder = f"data_dt={dt}_n-steps={n_steps}_m-steps={model_steps}_n-delta={n_delta}_delta={delta_min}-{delta_max}_n-waves={n_wave}_period={period_min}-{period_max}_amp={amp_min}-{amp_max}_train+val+test={n_train}+{n_val}+{n_test}"
 data_dir = os.path.join(os.getcwd(), 'data', data_folder)
 if not os.path.exists(data_dir):
     os.makedirs(data_dir)
@@ -77,11 +76,11 @@ param_source = os.path.abspath(os.path.join(os.getcwd(), "parameters.yml"))
 param_dest = os.path.abspath(os.path.join(data_dir, "parameters.yml"))
 copyfile(param_source, param_dest)
 
-
 #=========================================================
 # Data Generation
 #=========================================================
 np.random.seed(3)
+deltas = np.round(np.linspace(delta_min, delta_max, n_delta), decimals=n_decimal_delta)
 P = np.zeros(n_steps+1)
 Pdot = np.zeros(n_steps+1)
 #--------------------------------------------------------
@@ -112,8 +111,8 @@ for idx in range(n_train):
 # save training samples to file
 np.save(os.path.join(data_dir, f"train.npy"), train_data)
 # slice each training sample into smaller samples for each time-stepper
-for k in range(k_min, k_max+1):
-    step_size = np.int64(np.round(2**k))
+for k in range(n_delta):
+    step_size = deltas[k]
     slice_size = np.int64(np.round(model_steps * step_size))
     num_slices = np.int64(np.floor(n_steps/slice_size))
     N = np.int64(n_train * num_slices * slice_size)
@@ -157,8 +156,8 @@ for idx in range(n_val):
 # save validation samples to file
 np.save(os.path.join(data_dir, f"val.npy"), val_data)
 # slice samples for each time-stepper
-for k in range(k_min, k_max+1):
-    step_size = np.int64(np.round(2**k))
+for k in range(n_delta):
+    step_size = deltas[k]
     slice_size = np.int64(np.round(model_steps * step_size))
     num_slices = np.int64(np.floor(n_steps/slice_size))
     N = np.int64(n_val * num_slices * slice_size)
