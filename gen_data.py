@@ -49,12 +49,12 @@ print(f"-----------------------------------------")
 #=========================================================
 freq_range = [1/period_max, 1/period_min]
 amp_range = [amp_min, amp_max]
-n_steps = bub.get_num_steps(dt, model_steps, k_max, period_min, n_periods)
+n_steps = bub.get_num_steps(dt, model_steps, step_sizes[-1], period_min, n_periods)
 #---------------------------------------------------
 print(f"n_steps = {n_steps}")
 t_final = dt * (n_steps)
 print(f"t_final = {t_final}")
-t_space = np.arange(0,t_final+dt,dt)[0:n_steps+1]
+t_space = np.arange(0,t_final+dt, dt)[0:n_steps+1]
 print(f"t_space = {t_space[0:3]}...{t_space[n_steps-2:n_steps+1]}")
 #---------------------------------------------------
 # PAUSE script
@@ -63,11 +63,10 @@ print(f"t_space = {t_space[0:3]}...{t_space[n_steps-2:n_steps+1]}")
 #print('OTHERWISE, PRESS [c] THEN [ENTER]')
 #pdb.set_trace()
 
-
 #=========================================================
 # Directories and Paths
 #=========================================================
-data_folder = f"data_dt={dt}_n-steps={n_steps}_m-steps={model_steps}_n-delta={n_delta}_delta={delta_min}-{delta_max}_n-waves={n_wave}_period={period_min}-{period_max}_amp={amp_min}-{amp_max}_train+val+test={n_train}+{n_val}+{n_test}"
+data_folder = f"data_dt={dt}_n-steps={n_steps}_m-steps={model_steps}_delta={step_sizes}_n-waves={n_wave}_period={period_min}-{period_max}_amp={amp_min}-{amp_max}_train+val+test={n_train}+{n_val}+{n_test}"
 data_dir = os.path.join(os.getcwd(), 'data', data_folder)
 if not os.path.exists(data_dir):
     os.makedirs(data_dir)
@@ -80,7 +79,6 @@ copyfile(param_source, param_dest)
 # Data Generation
 #=========================================================
 np.random.seed(3)
-deltas = np.round(np.linspace(delta_min, delta_max, n_delta), decimals=n_decimal_delta)
 P = np.zeros(n_steps+1)
 Pdot = np.zeros(n_steps+1)
 #--------------------------------------------------------
@@ -111,8 +109,8 @@ for idx in range(n_train):
 # save training samples to file
 np.save(os.path.join(data_dir, f"train.npy"), train_data)
 # slice each training sample into smaller samples for each time-stepper
-for k in range(n_delta):
-    step_size = deltas[k]
+for k in range(len(step_sizes)):
+    step_size = step_sizes[k]
     slice_size = np.int64(np.round(model_steps * step_size))
     num_slices = np.int64(np.floor(n_steps/slice_size))
     N = np.int64(n_train * num_slices * slice_size)
@@ -156,8 +154,8 @@ for idx in range(n_val):
 # save validation samples to file
 np.save(os.path.join(data_dir, f"val.npy"), val_data)
 # slice samples for each time-stepper
-for k in range(n_delta):
-    step_size = deltas[k]
+for k in range(len(step_sizes)):
+    step_size = step_sizes[k]
     slice_size = np.int64(np.round(model_steps * step_size))
     num_slices = np.int64(np.floor(n_steps/slice_size))
     N = np.int64(n_val * num_slices * slice_size)

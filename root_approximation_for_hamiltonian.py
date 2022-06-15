@@ -53,7 +53,7 @@ print(f"-----------------------------------------")
 #=========================================================
 freq_range = [1/period_max, 1/period_min]
 amp_range = [amp_min, amp_max]
-n_steps = bub.get_num_steps(dt, model_steps, k_max, period_min, n_periods)
+n_steps = bub.get_num_steps(dt, model_steps, step_sizes[-1], period_min, n_periods)
 #---------------------------------------------------
 print(f"n_steps = {n_steps}")
 t_final = dt * (n_steps)
@@ -67,8 +67,7 @@ def F(R,Cp,Ca,S):
     return ((Ca+Cp)*R + 2/S)*(R**(3.2)) - (2/S+Ca)
 
 #---------------------------------------------------
-decimals = 3
-delta = np.round(10**(-decimals),decimals=decimals)
+delta = np.round(10**(-n_decimal_cp), decimals=n_decimal_cp)
 asymptote = -bubble.Ca
 #---------------------------------------------------
 N1 = np.int64(np.round((amp_max-asymptote)/delta + 1))

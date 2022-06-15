@@ -37,11 +37,11 @@ for key in D:
 #=========================================================
 # Directories and Paths
 #=========================================================
-n_steps = bub.get_num_steps(dt, model_steps, k_max, period_min, n_periods)
+n_steps = bub.get_num_steps(dt, model_steps, step_sizes[-1], period_min, n_periods)
 print(f"number of time-steps = {n_steps}")
-data_folder = f"data_dt={dt}_n-steps={n_steps}_m-steps={model_steps}_n-delta={n_delta}_delta={delta_min}-{delta_max}_n-waves={n_wave}_period={period_min}-{period_max}_amp={amp_min}-{amp_max}_train+val+test={n_train}+{n_val}+{n_test}"
+data_folder = f"data_dt={dt}_n-steps={n_steps}_m-steps={model_steps}_delta={step_sizes}_n-waves={n_wave}_period={period_min}-{period_max}_amp={amp_min}-{amp_max}_train+val+test={n_train}+{n_val}+{n_test}"
 data_dir = os.path.join(os.getcwd(), 'data', data_folder)
-model_folder = f"models_dt={dt}_steps={n_steps}_m-steps={model_steps}_k={k_min}-{k_max}_n-waves={n_wave}_period={period_min}-{period_max}_amp={amp_min}-{amp_max}_{n_lr}-lr={learn_rate_min}-{learn_rate_max}_n-batches={n_batch}_nresnet={n_input}+{n_layer}x{n_neuron}+{n_output}"
+model_folder = f"models_dt={dt}_steps={n_steps}_m-steps={model_steps}_delta={step_sizes}_n-waves={n_wave}_period={period_min}-{period_max}_amp={amp_min}-{amp_max}_{n_lr}-lr={learn_rate_min}-{learn_rate_max}_n-batches={n_batch}_nresnet={n_input}+{n_layer}x{n_neuron}+{n_output}"
 model_dir = os.path.join(os.getcwd(), 'models', model_folder)
 if not os.path.exists(data_dir):
     sys.exit(f"Cannot find folder ../data/{data_folder} in current directory")
@@ -59,11 +59,6 @@ file_fig_mse_potential = f"plot_mse_potential_{system}.png"
 #========================================================================
 # load validation set and test set
 test_data = np.load(os.path.join(data_dir, 'test.npy'))
-#--------------------------------------------------
-# list of k-values: k = 0 ... k_max
-ks = list(range(k_min, k_max+1))
-step_sizes = [ np.int64(np.round(2**k)) for k in ks ]
-num_models = len(ks)
 #--------------------------------------------------
 # load models
 models = list()
@@ -120,9 +115,8 @@ data_KE = list()
 data_PE = list()
 data_mse = list()
 data_rung = list()
-deltas = np.round(np.linspace(delta_min, delta_max, n_delta), decimals=n_decimal_delta)
 mse_ladder = np.zeros((n_delta,n_rungs))
-for k in range(n_delta):
+for k in range(len(step_sizes)):
     #--------------------------------------------------
     Pdot_list = list()
     Rdot_list = list()
@@ -133,7 +127,7 @@ for k in range(n_delta):
     rung_list = list()
     #--------------------------------------------------
     models = models[k]
-    step_size = deltas[k]
+    step_size = step_sizes[k]
     for idx_test in range(n_test):
         #--------------------------------------------------
         R = test_data[idx_test,:,0]

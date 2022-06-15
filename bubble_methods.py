@@ -6,13 +6,12 @@ from scipy.optimize import fsolve
 #=========================================================
 # Function: Calculates number of steps for total duration 
 #=========================================================
-def get_num_steps(dt, model_steps, k_max, period_min, n_periods):
-    max_steps = np.int64(np.round(model_steps * 2**k_max)) # max slice size
+def get_num_steps(dt, model_steps, step_size, period_min, n_periods):
+    max_steps = np.int64(np.round(model_steps * step_size)) # max slice size
     return np.int64(np.round( max_steps * np.ceil( n_periods * period_min / (dt * max_steps)) ))
 
-
 #========================================================
-# Functions for calculating the Hamiltonian
+# Functions related to calculating the Hamiltonian
 #========================================================
 def F(r,Cp,Ca,S,poly_index):
     return ((Ca+Cp)*r + 2/S)*(r**(3*poly_index-1)) - (2/S+Ca)
